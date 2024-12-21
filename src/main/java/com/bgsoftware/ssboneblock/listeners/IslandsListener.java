@@ -15,21 +15,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class IslandsListener implements Listener {
 
-    private final OneBlockModule plugin;
+    private final OneBlockModule module;
 
-    public IslandsListener(OneBlockModule plugin) {
-        this.plugin = plugin;
+    public IslandsListener(OneBlockModule module) {
+        this.module = module;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onIslandDelete(IslandDisbandEvent e) {
-        plugin.getPhasesHandler().getDataStore().removeIsland(e.getIsland());
+        module.getPhasesHandler().getDataStore().removeIsland(e.getIsland());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onIslandCreate(IslandCreateEvent e) {
         //与SSB MONGO冲突，需要延迟。
-//        plugin.getPhasesHandler().runNextAction(e.getIsland(), e.getPlayer());
+//        module.getPhasesHandler().runNextAction(e.getIsland(), e.getPlayer());
     }
 
 

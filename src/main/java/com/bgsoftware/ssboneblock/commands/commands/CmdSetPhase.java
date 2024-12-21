@@ -47,7 +47,7 @@ public final class CmdSetPhase implements ICommand {
     }
 
     @Override
-    public void perform(OneBlockModule plugin, CommandSender sender, String[] args) {
+    public void perform(OneBlockModule module, CommandSender sender, String[] args) {
         SuperiorPlayer targetPlayer = SuperiorSkyblockAPI.getPlayer(args[1]);
         Island island = targetPlayer == null ? SuperiorSkyblockAPI.getGrid().getIsland(args[1]) : targetPlayer.getIsland();
 
@@ -56,7 +56,7 @@ public final class CmdSetPhase implements ICommand {
             return;
         }
 
-        if(!plugin.getPhasesHandler().canHaveOneBlock(island)) {
+        if(!module.getPhasesHandler().canHaveOneBlock(island)) {
             Message.ISLAND_MISSING_BLOCK.send(sender);
             return;
         }
@@ -71,7 +71,7 @@ public final class CmdSetPhase implements ICommand {
         }
         IslandPhaseData islandPhaseData = plugin.getPhasesHandler().getDataStore().getPhaseData(island, true);
 
-        if (phaseLevel <= 0 || !plugin.getPhasesHandler().setPhaseLevel(island, phaseLevel - 1, island.getOwner(), islandPhaseData.getPhaseLoopTimes())) {
+        if (phaseLevel <= 0 || !module.getPhasesHandler().setPhaseLevel(island, phaseLevel - 1, island.getOwner(), islandPhaseData.getPhaseLoopTimes())) {
             Message.SET_PHASE_FAILURE.send(sender, phaseLevel);
         } else {
             Message.SET_PHASE_SUCCESS.send(sender, args[1], phaseLevel);
@@ -79,7 +79,7 @@ public final class CmdSetPhase implements ICommand {
     }
 
     @Override
-    public List<String> tabComplete(OneBlockModule plugin, CommandSender sender, String[] args) {
+    public List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
         List<String> list = new ArrayList<>();
 
         if (args.length == 2) {
