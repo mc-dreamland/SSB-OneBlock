@@ -6,6 +6,7 @@ import com.bgsoftware.ssboneblock.commands.commands.SSBCheckCmd;
 import com.bgsoftware.ssboneblock.data.DataType;
 import com.bgsoftware.ssboneblock.error.ParsingException;
 import com.bgsoftware.ssboneblock.factory.BlockOffsetFactory;
+import com.bgsoftware.ssboneblock.utils.Pair;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.wrappers.BlockOffset;
 import com.google.gson.JsonPrimitive;
@@ -13,10 +14,7 @@ import org.bukkit.ChatColor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
@@ -24,9 +22,10 @@ public final class SettingsHandler {
 
     public final BlockOffset blockOffset;
     public final List<String> timerFormat;
-    public final List<String> phases;
+    public final List<Pair<String, Integer>> phases;
     public final List<String> whitelistedSchematics;
     public final DataType dataType;
+    public final double phasesLoopMultiple;
     public final boolean phasesLoop;
     public final boolean pistonsInteraction;
 
@@ -63,7 +62,13 @@ public final class SettingsHandler {
         }
         Collections.reverse(this.timerFormat);
 
-        phases = cfg.getStringList("phases");
+        List<String> ph = cfg.getStringList("phases");
+        phases = new ArrayList<>();
+        for (String s : ph) {
+            s = s.replace(" ", "");
+            String[] split = s.split("@");
+            phases.add(new Pair<>(split[1], Integer.valueOf(split[0])));
+        }
 
         if (cfg.getBoolean("inject-island-command", true)) {
             SuperiorSkyblockAPI.registerCommand(new SSBCheckCmd());
@@ -82,6 +87,7 @@ public final class SettingsHandler {
         this.dataType = dataType;
 
         this.phasesLoop = cfg.getBoolean("phases-loop", false);
+        this.phasesLoopMultiple = cfg.getDouble("phases-loop-multiple", 1.0d);
         this.pistonsInteraction = cfg.getBoolean("piston-interaction", true);
     }
 

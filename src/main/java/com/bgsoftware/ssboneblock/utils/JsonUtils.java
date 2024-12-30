@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,11 +41,25 @@ public final class JsonUtils {
         return gson;
     }
 
+    private static Pair<Integer, Integer> getFixed(JsonElement jsonElement) {
+
+        String s = jsonElement.getAsString();
+        String[] split = s.replace(" ", "").split(",");
+        if (split.length == 1) {
+            return new Pair<>(jsonElement.getAsInt(), jsonElement.getAsInt());
+        }
+        return new Pair<>(Integer.parseInt(split[0]), Integer.parseInt(split[1]));
+
+    }
+
     public static Optional<Action> getAction(JsonObject actionObject, PhasesHandler phasesHandler, String fileName) throws ParsingException {
         JsonElement actionElement = actionObject.get("action");
 
         if (!(actionElement instanceof JsonPrimitive))
             throw new ParsingException("Missing \"action\" section.");
+
+        int weight = actionObject.has("weight") ? actionObject.get("weight").getAsInt() : -1;
+        Pair<Integer, Integer> fixedCount = actionObject.has("fixed") ? getFixed(actionObject.get("fixed")) : new Pair<>(-1, -1);
 
         String action = actionElement.getAsString();
         ActionType actionType;
@@ -54,19 +69,28 @@ public final class JsonUtils {
         } catch (IllegalArgumentException ex) {
             throw new ParsingException("Invalid action-type \"" + action + "\".");
         }
-
+        Optional<Action> actionOptional;
         switch (actionType) {
             case SET_BLOCK:
-                return SetBlockAction.fromJson(actionObject, phasesHandler, fileName);
+                actionOptional = SetBlockAction.fromJson(actionObject, phasesHandler, fileName);
+                break;
             case RANDOM:
-                return RandomAction.fromJson(actionObject, phasesHandler, fileName);
+                actionOptional = RandomAction.fromJson(actionObject, phasesHandler, fileName);
+                break;
             case COMMAND:
-                return CommandAction.fromJson(actionObject);
+                actionOptional = CommandAction.fromJson(actionObject);
+                break;
             case SPAWN_ENTITY:
-                return SpawnEntityAction.fromJson(actionObject);
+                actionOptional = SpawnEntityAction.fromJson(actionObject);
+                break;
             default:
                 throw new ParsingException("Invalid action-type \"" + action + "\".");
         }
+        actionOptional.ifPresent(value -> {
+            value.setWeight(weight);
+            value.setFixedCount(fixedCount);
+        });
+        return actionOptional;
     }
 
     public static Action[] getActionsArray(JsonArray jsonArray, PhasesHandler phasesManager, String fileName) {
@@ -89,6 +113,10 @@ public final class JsonUtils {
                             .ifPresent(multipleActions::add);
                 }
                 action = new MultiAction(multipleActions.toArray(new Action[0]));
+                int weight = actionObject.has("weight") ? actionObject.get("weight").getAsInt() : -1;
+                Pair<Integer, Integer> fixedCount = actionObject.has("fixed") ? getFixed(actionObject.get("fixed")) : new Pair<>(-1, -1);
+                action.setWeight(weight);
+                action.setFixedCount(fixedCount);
             } else {
                 action = getActionSafely(actionObject, phasesManager, fileName).orElse(null);
             }

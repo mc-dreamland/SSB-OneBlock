@@ -44,11 +44,10 @@ public final class CmdReload implements ICommand {
     @Override
     public void perform(OneBlockModule plugin, CommandSender sender, String[] args) {
         long startTime = System.currentTimeMillis();
-        plugin.getJavaPlugin().getServer().getScheduler().runTaskAsynchronously(plugin.getJavaPlugin(), () -> {
-            plugin.getPhasesHandler().getDataStore().save();
-            plugin.onReload((SuperiorSkyblock) plugin.getJavaPlugin());
-            sender.sendMessage(ChatColor.YELLOW + "Successfully loaded all files (Took " + (System.currentTimeMillis() - startTime) + "ms)!");
-        });
+
+        plugin.getPhasesHandler().getDataStore().save();
+        plugin.onReload((SuperiorSkyblock) plugin.getJavaPlugin());
+        sender.sendMessage(ChatColor.YELLOW + "Successfully loaded all files (Took " + (System.currentTimeMillis() - startTime) + "ms)!");
     }
 
     @Override

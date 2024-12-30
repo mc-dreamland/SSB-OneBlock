@@ -151,6 +151,10 @@ public final class OneBlockModule extends PluginModule {
         return (JavaPlugin) plugin;
     }
 
+    public SuperiorSkyblock getSPlugin() {
+        return plugin;
+    }
+
     public static void log(String message) {
         instance.getLogger().info(message);
     }
@@ -209,6 +213,51 @@ public final class OneBlockModule extends PluginModule {
                 return "0";
 
             return String.valueOf(islandPhaseData.getPhaseBlock() * 100 / phaseData.getActionsSize());
+        });
+
+        placeholdersService.registerPlaceholder("oneblock_loops", (island, superiorPlayer) -> {
+            if (island == null)
+                return null;
+
+            IslandPhaseData islandPhaseData = phasesHandler.getDataStore().getPhaseData(island, false);
+
+
+            return String.valueOf(islandPhaseData.getPhaseLoopTimes());
+        });
+
+        placeholdersService.registerPlaceholder("oneblock_total_blocks", (island, superiorPlayer) -> {
+            if (island == null)
+                return null;
+
+            IslandPhaseData islandPhaseData = phasesHandler.getDataStore().getPhaseData(island, false);
+
+            if (islandPhaseData == null)
+                return "0";
+
+            PhaseData phaseData = phasesHandler.getPhaseData(islandPhaseData);
+
+            if (phaseData == null)
+                return "0";
+
+            int phaseLevel = islandPhaseData.getPhaseLevel();
+            int phaseBlock = islandPhaseData.getPhaseBlock();
+            double phasesLoopMultiple = getSettings().phasesLoopMultiple;
+            int totalBefore = phasesHandler.getPhaseData(phaseLevel).getStart() - 1;
+
+            PhaseData maxPhaseData = phasesHandler.getMaxPhaseData();
+            if (maxPhaseData == null) {
+                return "0";
+            }
+            int end = maxPhaseData.getEnd();
+            double loopedProgress = end; // 第 0 次循环直接是 end
+            double currentMultiplier = 1.0; // 初始倍率为1
+            for (int i = 1; i < islandPhaseData.getPhaseLoopTimes(); i++) {
+                currentMultiplier *= phasesLoopMultiple;
+                loopedProgress += currentMultiplier * end;
+            }
+
+            double totalProgress = totalBefore * currentMultiplier + loopedProgress + phaseBlock;
+            return String.valueOf(totalProgress);
         });
 
         placeholdersService.registerPlaceholder("oneblock_blocks_in_phase", (island, superiorPlayer) -> {

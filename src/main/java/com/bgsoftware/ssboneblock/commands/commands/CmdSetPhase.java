@@ -3,6 +3,7 @@ package com.bgsoftware.ssboneblock.commands.commands;
 import com.bgsoftware.ssboneblock.lang.Message;
 import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.commands.ICommand;
+import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
@@ -68,8 +69,9 @@ public final class CmdSetPhase implements ICommand {
             Message.INVALID_NUMBER.send(sender, args[2]);
             return;
         }
+        IslandPhaseData islandPhaseData = plugin.getPhasesHandler().getDataStore().getPhaseData(island, true);
 
-        if (phaseLevel <= 0 || !plugin.getPhasesHandler().setPhaseLevel(island, phaseLevel - 1, island.getOwner())) {
+        if (phaseLevel <= 0 || !plugin.getPhasesHandler().setPhaseLevel(island, phaseLevel - 1, island.getOwner(), islandPhaseData.getPhaseLoopTimes())) {
             Message.SET_PHASE_FAILURE.send(sender, phaseLevel);
         } else {
             Message.SET_PHASE_SUCCESS.send(sender, args[1], phaseLevel);

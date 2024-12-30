@@ -28,7 +28,7 @@ public final class FlatDataStore implements DataStore {
     @Override
     public IslandPhaseData getPhaseData(Island island, boolean createNew) {
         return !createNew ? this.islandPhaseData.get(island.getUniqueId()) :
-                this.islandPhaseData.computeIfAbsent(island.getUniqueId(), v -> new IslandPhaseData(0, 0));
+                this.islandPhaseData.computeIfAbsent(island.getUniqueId(), v -> new IslandPhaseData(0, 0, 0));
     }
 
     @Override
@@ -67,7 +67,8 @@ public final class FlatDataStore implements DataStore {
                         UUID islandUUID = UUID.fromString(islandData.get("island").getAsString());
                         int phaseLevel = islandData.get("phase-level").getAsInt();
                         int phaseBlock = islandData.get("phase-block").getAsInt();
-                        setPhaseData(islandUUID, new IslandPhaseData(phaseLevel, phaseBlock));
+                        int phaseLoop = islandData.get("phase-loop").getAsInt();
+                        setPhaseData(islandUUID, new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop));
                     } catch (Throwable error) {
                         OneBlockModule.log("Failed to parse data for element: " + islandDataElement);
                         error.printStackTrace();

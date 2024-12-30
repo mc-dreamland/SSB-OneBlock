@@ -8,8 +8,12 @@ import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.ssboneblock.phases.PhaseData;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.utils.JsonUtils;
+import com.bgsoftware.ssboneblock.utils.Pair;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
+import com.bgsoftware.superiorskyblock.core.database.bridge.IslandsDatabaseBridge;
+import com.bgsoftware.superiorskyblock.core.database.bridge.PlayersDatabaseBridge;
+import com.bgsoftware.superiorskyblock.core.logging.Log;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Location;
@@ -19,10 +23,7 @@ import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class PhasesHandler {
@@ -37,6 +38,7 @@ public final class PhasesHandler {
         this.plugin = plugin;
         this.dataStore = dataStore;
         phaseData = loadData(plugin);
+        this.times = new HashMap<>();
     }
 
     public JsonArray getPossibilities(String possibilities) {
@@ -53,9 +55,32 @@ public final class PhasesHandler {
         return phaseLevel >= phaseData.length ? null : phaseData[phaseLevel];
     }
 
+    public PhaseData getMaxPhaseData() {
+        if (phaseData == null || phaseData.length == 0) {
+            return null;
+        }
+        return phaseData[phaseData.length - 1];
+    }
+
+    public HashMap<UUID, Integer> times;
+
     public void runNextAction(Island island, @Nullable SuperiorPlayer superiorPlayer) {
-        if (!canHaveOneBlock(island))
+        if (!canHaveOneBlock(island)) {
             return;
+        }
+        int i = 0;
+        if (times.containsKey(island.getUniqueId())) {
+            i = times.get(island.getUniqueId());
+            i++;
+            if (i >= 100) {
+                IslandsDatabaseBridge.savePersistentDataContainer(island);
+                i = 0;
+            }
+        } else {
+            times.put(island.getUniqueId(), 0);
+        }
+        times.put(island.getUniqueId(), i);
+
 
         IslandPhaseData islandPhaseData = this.dataStore.getPhaseData(island, true);
 
@@ -66,7 +91,7 @@ public final class PhasesHandler {
         }
 
         PhaseData phaseData = this.phaseData[islandPhaseData.getPhaseLevel()];
-        Action action = phaseData.getAction(islandPhaseData.getPhaseBlock());
+        Action action = phaseData.getAction(islandPhaseData.getPhaseBlock(), islandPhaseData.getPhaseLoopTimes());
 
         Location oneBlockLocation = plugin.getSettings().blockOffset.applyToLocation(
                 island.getCenter(World.Environment.NORMAL).subtract(0.5, 0, 0.5));
@@ -74,7 +99,10 @@ public final class PhasesHandler {
         if (action == null) {
             int nextPhaseLevel = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
                     islandPhaseData.getPhaseLevel() + 1 : plugin.getSettings().phasesLoop ? 0 : -1;
-            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, nextPhaseLevel);
+            int loopTimes = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
+                    islandPhaseData.getPhaseLoopTimes() : plugin.getSettings().phasesLoop ? islandPhaseData.getPhaseLoopTimes() + 1 : 0;
+
+            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, nextPhaseLevel, loopTimes);
             return;
         }
 
@@ -91,32 +119,32 @@ public final class PhasesHandler {
             this.dataStore.setPhaseData(island, islandPhaseData.nextBlock());
 
         Message.PHASE_PROGRESS.send(superiorPlayer,
-                islandPhaseData.getPhaseBlock() * 100 / phaseData.getActionsSize(),
+                String.format("%.1f", islandPhaseData.getPhaseBlock() * 100.0D / ((phaseData.getEnd() - phaseData.getStart()) * Math.pow(OneBlockModule.getPlugin().getSettings().phasesLoopMultiple, islandPhaseData.getPhaseLoopTimes()))),
                 islandPhaseData.getPhaseBlock(),
                 phaseData.getActionsSize());
 
         // We check for last phase here as well.
         if (plugin.getSettings().phasesLoop && islandPhaseData.getPhaseBlock() + 1 == phaseData.getActionsSize() &&
                 islandPhaseData.getPhaseLevel() + 1 == this.phaseData.length)
-            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, 0);
+            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, 0, islandPhaseData.getPhaseLoopTimes());
     }
 
     private void runNextActionTimer(Island island, @Nullable SuperiorPlayer superiorPlayer, Location oneBlockLocation,
-                                    PhaseData phaseData, int nextPhaseLevel) {
+                                    PhaseData phaseData, int nextPhaseLevel, int loopTimes) {
         if (NextPhaseTimer.getTimer(island) == null) {
             oneBlockLocation.getBlock().setType(Material.BEDROCK);
             if (nextPhaseLevel >= 0) {
                 new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(),
-                        () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer));
+                        () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes));
             }
         }
     }
 
-    public boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer) {
+    public boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer, int loopTimes) {
         if (phaseLevel >= phaseData.length)
             return false;
 
-        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0);
+        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0, loopTimes);
         this.dataStore.setPhaseData(island, islandPhaseData);
 
         runNextAction(island, superiorPlayer);
@@ -128,10 +156,10 @@ public final class PhasesHandler {
         IslandPhaseData islandPhaseData = this.dataStore.getPhaseData(island, true);
         PhaseData phaseData = this.phaseData[islandPhaseData.getPhaseLevel()];
 
-        if (phaseData.getAction(phaseBlock) == null)
+        if (phaseData.getAction(phaseBlock, islandPhaseData.getPhaseLoopTimes()) == null)
             return false;
 
-        this.dataStore.setPhaseData(island, new IslandPhaseData(islandPhaseData.getPhaseLevel(), phaseBlock));
+        this.dataStore.setPhaseData(island, new IslandPhaseData(islandPhaseData.getPhaseLevel(), phaseBlock, islandPhaseData.getPhaseLoopTimes()));
         runNextAction(island, superiorPlayer);
 
         return true;
@@ -217,19 +245,19 @@ public final class PhasesHandler {
 
         List<PhaseData> phaseDataList = new ArrayList<>();
 
-        for (String phaseFileName : plugin.getSettings().phases) {
-            File phaseFile = new File(plugin.getModuleFolder() + "/phases", phaseFileName);
+        for (Pair<String, Integer> phaseFileName : plugin.getSettings().phases) {
+            File phaseFile = new File(plugin.getModuleFolder() + "/phases", phaseFileName.first);
 
             if (!phaseFile.exists()) {
-                OneBlockModule.log("Failed find the phase file " + phaseFileName + "...");
+                OneBlockModule.log("Failed find the phase file " + phaseFileName.first + "...");
                 continue;
             }
 
-            OneBlockModule.log("Checking " + phaseFileName);
+            OneBlockModule.log("Checking " + phaseFileName.first);
 
             try {
                 JsonObject jsonObject = JsonUtils.parseFile(phaseFile, JsonObject.class);
-                PhaseData.fromJson(jsonObject, this, phaseFileName).ifPresent(phaseDataList::add);
+                PhaseData.fromJson(jsonObject, this, phaseFileName.first).ifPresent(phaseDataList::add);
             } catch (Exception ex) {
                 OneBlockModule.log("Failed to parse phase " + phaseFile.getName() + ":");
                 ex.printStackTrace();

@@ -22,10 +22,11 @@ public final class SqlDataStore implements DataStore {
     public IslandPhaseData getPhaseData(Island island, boolean createNew) {
         IslandPhaseData islandPhaseData = island.getPersistentDataContainer().get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
 
-        if (islandPhaseData != null || !createNew)
+        if (islandPhaseData != null || !createNew) {
             return islandPhaseData;
+        }
 
-        islandPhaseData = new IslandPhaseData(0, 0);
+        islandPhaseData = new IslandPhaseData(0, 0, 0);
         setPhaseData(island, islandPhaseData);
         return islandPhaseData;
     }
@@ -78,13 +79,14 @@ public final class SqlDataStore implements DataStore {
             ByteArrayDataOutput data = ByteStreams.newDataOutput();
             data.writeInt(islandPhaseData.getPhaseLevel());
             data.writeInt(islandPhaseData.getPhaseBlock());
+            data.writeInt(islandPhaseData.getPhaseLoopTimes());
             return data.toByteArray();
         }
 
         @Override
         public IslandPhaseData deserialize(byte[] bytes) {
             ByteArrayDataInput data = ByteStreams.newDataInput(bytes);
-            return new IslandPhaseData(data.readInt(), data.readInt());
+            return new IslandPhaseData(data.readInt(), data.readInt(), data.readInt());
         }
 
     }

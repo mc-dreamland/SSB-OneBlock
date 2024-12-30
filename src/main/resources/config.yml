@@ -15,16 +15,17 @@ timer-format: '&6{0}'
 
 # Set the hierarchy of the phases
 phases:
-  - 'plains-phase.json'
-  - 'underground-phase.json'
-  - 'snow-phase.json'
-  - 'ocean-phase.json'
-  - 'jungle-phase.json'
-  - 'red-desert-phase.json'
-  - 'nether-phase.json'
-  - 'idyll-phase.json'
-  - 'desolate-phase.json'
-  - 'end-phase.json'
+  - '2000      @   0-plains-phase.json'
+  - '4000      @   1-underground-phase.json'
+  - '6000      @   2-snow-phase.json'
+  - '8000      @   3-ocean-phase.json'
+  - '10000     @   4-jungle-phase.json'
+  - '12000     @   5-red-desert-phase.json'
+  - '14000     @   6-nether-phase.json'
+  - '16000     @   7-idyll-phase.json'
+  - '18000     @   8-desolate-phase.json'
+  - '20000     @   9-end-phase.json'
+  - '100000    @   10-poor-phase.json'
 
 # Should /is oneblock will be injected into SuperiorSkyblock?
 # This command is identical to /oneblock check.
