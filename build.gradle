@@ -25,6 +25,7 @@ allprojects {
     }
 
     repositories {
+        maven { url "https://repo.papermc.io/repository/maven-public/" }
         maven { url 'https://repo.bg-software.com/repository/nms/' }
         maven { url 'https://repo.bg-software.com/repository/api/' }
         maven { url 'https://repo.bg-software.com/repository/common/' }
@@ -55,6 +56,7 @@ dependencies {
     implementation 'com.bgsoftware.common.nmsloader:NMSLoader:b8'
 
 //    compileOnly 'com.bgsoftware:SuperiorSkyblockAPI:2022.9'
+    compileOnly files('libs/SuperiorSkyblock2API.jar')
     compileOnly files('libs/SuperiorSkyblock2-2024.4.jar')
 
     compileOnly "org.spigotmc:v1_12_R1:latest"

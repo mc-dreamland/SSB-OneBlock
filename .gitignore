@@ -12,3 +12,7 @@ build
 # Ignore output generated files
 target
 out
+
+bin
+libs
+.vscode

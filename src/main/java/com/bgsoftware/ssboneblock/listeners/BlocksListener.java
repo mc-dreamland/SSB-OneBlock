@@ -62,7 +62,7 @@ public final class BlocksListener implements Listener {
         e.setCancelled(true);
 
         boolean shouldDropItems;
-
+        Material type = block.getType();
         try {
             fakeBreakEvent = true;
             BlockBreakEvent fakeEvent = new BlockBreakEvent(e.getBlock(), e.getPlayer());
@@ -78,6 +78,9 @@ public final class BlocksListener implements Listener {
             }
         } finally {
             fakeBreakEvent = false;
+            if (block.isEmpty()) {
+                block.setType(type);
+            }
         }
 
         Block underBlock = block.getRelative(BlockFace.DOWN);
@@ -93,7 +96,6 @@ public final class BlocksListener implements Listener {
         if (shouldDropItems) {
             Collection<ItemStack> drops = block.getDrops(inHandItem);
             BlockState blockState = block.getState();
-
             if (blockState instanceof InventoryHolder && WorldUtils.shouldDropInventory((InventoryHolder) blockState)) {
                 Inventory inventory = ((InventoryHolder) blockState).getInventory();
                 Collections.addAll(drops, inventory.getContents());
