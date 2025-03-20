@@ -32,6 +32,7 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.RegisteredListener;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -45,6 +46,27 @@ public final class BlocksListener implements Listener {
 
     public BlocksListener(OneBlockModule plugin) {
         this.plugin = plugin;
+        Bukkit.getScheduler().runTask(plugin.getJavaPlugin(), () -> {
+            if (Bukkit.getPluginManager().isPluginEnabled("AdvancedEnchantments")) {
+                for (RegisteredListener listener : BlockBreakEvent.getHandlerList().getRegisteredListeners()) {
+                    if (listener.getPlugin().getName().equals("AdvancedEnchantments")) {
+                        Bukkit.getLogger().info("Hook into " + listener.getListener());
+                        BlockBreakEvent.getHandlerList().unregister(listener);
+                        BlockBreakEvent.getHandlerList().register(new RegisteredListener(listener.getListener(),
+                                (li, event) -> {
+                                    if (fakeBreakEvent) {
+                                        listener.callEvent(event);
+//                                        Bukkit.getLogger().info("Call " + li.getClass().getName());
+                                    }
+                                },
+                                listener.getPriority(),
+                                listener.getPlugin(),
+                                listener.isIgnoringCancelled()
+                        ));
+                    }
+                }
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -78,9 +100,9 @@ public final class BlocksListener implements Listener {
             }
         } finally {
             fakeBreakEvent = false;
-            if (block.isEmpty()) {
-                block.setType(type);
-            }
+//            if (block.isEmpty()) {
+//                block.setType(type);
+//            }
         }
 
         Block underBlock = block.getRelative(BlockFace.DOWN);
@@ -93,7 +115,7 @@ public final class BlocksListener implements Listener {
         blockLocation.add(0, 1, 0);
         World blockWorld = block.getWorld();
 
-        if (shouldDropItems) {
+        if (shouldDropItems && !block.isEmpty()) {
             Collection<ItemStack> drops = block.getDrops(inHandItem);
             BlockState blockState = block.getState();
             if (blockState instanceof InventoryHolder && WorldUtils.shouldDropInventory((InventoryHolder) blockState)) {
