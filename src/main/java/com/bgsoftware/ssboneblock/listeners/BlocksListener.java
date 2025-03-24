@@ -42,7 +42,7 @@ public final class BlocksListener implements Listener {
 
     private final OneBlockModule plugin;
 
-    private boolean fakeBreakEvent = false;
+    private EventFlags eventFlags = EventFlags.DEFAULT;
 
     public BlocksListener(OneBlockModule plugin) {
         this.plugin = plugin;
@@ -50,13 +50,16 @@ public final class BlocksListener implements Listener {
             if (Bukkit.getPluginManager().isPluginEnabled("AdvancedEnchantments")) {
                 for (RegisteredListener listener : BlockBreakEvent.getHandlerList().getRegisteredListeners()) {
                     if (listener.getPlugin().getName().equals("AdvancedEnchantments")) {
-                        Bukkit.getLogger().info("Hook into " + listener.getListener());
+//                        Bukkit.getLogger().info("Hook into " + listener.getListener() + ", " + listener.getPriority());
                         BlockBreakEvent.getHandlerList().unregister(listener);
                         BlockBreakEvent.getHandlerList().register(new RegisteredListener(listener.getListener(),
                                 (li, event) -> {
-                                    if (fakeBreakEvent) {
-                                        listener.callEvent(event);
-//                                        Bukkit.getLogger().info("Call " + li.getClass().getName());
+                                    switch (eventFlags) {
+                                        case DEFAULT:
+                                        case FAKE_TRIGGERING: {
+                                            listener.callEvent(event);
+//                                            Bukkit.getLogger().info("Call " + li.getClass().getName());
+                                        }
                                     }
                                 },
                                 listener.getPriority(),
@@ -71,22 +74,24 @@ public final class BlocksListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onOneBlockBreak(BlockBreakEvent e) {
-        if (fakeBreakEvent)
+        if (eventFlags == EventFlags.FAKE_TRIGGERING)
             return;
-
+//        Bukkit.getLogger().info("Call SSBOneBlock BlockBreak");
         Block block = e.getBlock();
         Location blockLocation = block.getLocation();
         Island island = getOneBlockIsland(blockLocation);
 
-        if (island == null)
+        if (island == null) {
+            eventFlags = EventFlags.DEFAULT;
             return;
+        }
 
         e.setCancelled(true);
 
         boolean shouldDropItems;
-        Material type = block.getType();
         try {
-            fakeBreakEvent = true;
+            eventFlags = EventFlags.FAKE_TRIGGERING;
+//            Bukkit.getLogger().info("Call fake event");
             BlockBreakEvent fakeEvent = new BlockBreakEvent(e.getBlock(), e.getPlayer());
             Bukkit.getPluginManager().callEvent(fakeEvent);
 
@@ -99,7 +104,7 @@ public final class BlocksListener implements Listener {
                 shouldDropItems = false;
             }
         } finally {
-            fakeBreakEvent = false;
+            eventFlags = EventFlags.POST_FAKE;
 //            if (block.isEmpty()) {
 //                block.setType(type);
 //            }
