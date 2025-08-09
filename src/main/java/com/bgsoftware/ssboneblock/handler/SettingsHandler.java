@@ -28,6 +28,7 @@ public final class SettingsHandler {
     public final double phasesLoopMultiple;
     public final boolean phasesLoop;
     public final boolean pistonsInteraction;
+    public final boolean dropNaturally;
 
     public SettingsHandler(OneBlockModule module) {
         File file = new File(module.getModuleFolder(), "config.yml");
@@ -89,6 +90,7 @@ public final class SettingsHandler {
         this.phasesLoop = cfg.getBoolean("phases-loop", false);
         this.phasesLoopMultiple = cfg.getDouble("phases-loop-multiple", 1.0d);
         this.pistonsInteraction = cfg.getBoolean("piston-interaction", true);
+        this.dropNaturally = cfg.getBoolean("drop-naturally", true);
     }
 
 }
