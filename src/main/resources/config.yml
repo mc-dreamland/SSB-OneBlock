@@ -27,6 +27,8 @@ phases:
   - '20000     @   9-end-phase.json'
   - '100000    @   10-poor-phase.json'
 
+phases-loop-multiple: 1.1
+
 # Should /is oneblock will be injected into SuperiorSkyblock?
 # This command is identical to /oneblock check.
 # The permission for using the command will be superior.island.oneblock
