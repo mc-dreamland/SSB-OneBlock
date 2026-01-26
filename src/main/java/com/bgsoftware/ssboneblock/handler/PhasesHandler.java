@@ -65,6 +65,10 @@ public final class PhasesHandler {
     public HashMap<UUID, Integer> times;
 
     public void runNextAction(Island island, @Nullable SuperiorPlayer superiorPlayer) {
+        runNextAction(island, superiorPlayer, null);
+    }
+
+    public void runNextAction(Island island, @Nullable SuperiorPlayer superiorPlayer, @Nullable Location oneBlockLocation) {
         if (!canHaveOneBlock(island)) {
             return;
         }
@@ -93,7 +97,10 @@ public final class PhasesHandler {
         PhaseData phaseData = this.phaseData[islandPhaseData.getPhaseLevel()];
         Action action = phaseData.getAction(islandPhaseData.getPhaseBlock(), islandPhaseData.getPhaseLoopTimes());
 
-        Location oneBlockLocation = WorldUtils.getOneBlock(island);
+        Location targetLocation = oneBlockLocation == null ? WorldUtils.getOneBlock(island) : oneBlockLocation.clone();
+        if (targetLocation == null) {
+            return;
+        }
 
         if (action == null) {
             int nextPhaseLevel = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
@@ -101,7 +108,7 @@ public final class PhasesHandler {
             int loopTimes = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
                     islandPhaseData.getPhaseLoopTimes() :( module.getSettings().phasesLoop ? islandPhaseData.getPhaseLoopTimes() + 1 : 0);
 
-            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, nextPhaseLevel, loopTimes);
+            runNextActionTimer(island, superiorPlayer, targetLocation, phaseData, nextPhaseLevel, loopTimes);
             return;
         }
 
@@ -110,7 +117,7 @@ public final class PhasesHandler {
             nextPhaseTimer.cancel();
         });
 
-        action.run(oneBlockLocation, island, superiorPlayer);
+        action.run(targetLocation, island, superiorPlayer);
 
         IslandPhaseData newPhaseData = this.dataStore.getPhaseData(island, false);
 
@@ -125,7 +132,7 @@ public final class PhasesHandler {
         // We check for last phase here as well.
         if (module.getSettings().phasesLoop && islandPhaseData.getPhaseBlock() + 1 == phaseData.getActionsSize() &&
                 islandPhaseData.getPhaseLevel() + 1 == this.phaseData.length)
-            runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, 0, islandPhaseData.getPhaseLoopTimes());
+            runNextActionTimer(island, superiorPlayer, targetLocation, phaseData, 0, islandPhaseData.getPhaseLoopTimes());
     }
 
     private void runNextActionTimer(Island island, @Nullable SuperiorPlayer superiorPlayer, Location oneBlockLocation,
@@ -133,20 +140,26 @@ public final class PhasesHandler {
         if (NextPhaseTimer.getTimer(island) == null) {
             oneBlockLocation.getBlock().setType(Material.BEDROCK);
             if (nextPhaseLevel >= 0) {
-                new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(),
-                        () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes));
+                new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(), oneBlockLocation,
+                        () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes, oneBlockLocation));
             }
         }
     }
 
     public boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer, int loopTimes) {
+        return setPhaseLevel(island, phaseLevel, superiorPlayer, loopTimes, null);
+    }
+
+    public boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer, int loopTimes,
+                                 @Nullable Location oneBlockLocation) {
         if (phaseLevel >= phaseData.length)
             return false;
 
-        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0, loopTimes);
+        IslandPhaseData existingPhaseData = this.dataStore.getPhaseData(island, true);
+        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0, loopTimes, existingPhaseData.getOneBlockLocations());
         this.dataStore.setPhaseData(island, islandPhaseData);
 
-        runNextAction(island, superiorPlayer);
+        runNextAction(island, superiorPlayer, oneBlockLocation);
 
         return true;
     }
@@ -158,8 +171,9 @@ public final class PhasesHandler {
         if (phaseData.getAction(phaseBlock, islandPhaseData.getPhaseLoopTimes()) == null)
             return false;
 
-        this.dataStore.setPhaseData(island, new IslandPhaseData(islandPhaseData.getPhaseLevel(), phaseBlock, islandPhaseData.getPhaseLoopTimes()));
-        runNextAction(island, superiorPlayer);
+        this.dataStore.setPhaseData(island, new IslandPhaseData(islandPhaseData.getPhaseLevel(), phaseBlock,
+                islandPhaseData.getPhaseLoopTimes(), islandPhaseData.getOneBlockLocations()));
+        runNextAction(island, superiorPlayer, null);
 
         return true;
     }

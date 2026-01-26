@@ -67,8 +67,24 @@ public final class FlatDataStore implements DataStore {
                         UUID islandUUID = UUID.fromString(islandData.get("island").getAsString());
                         int phaseLevel = islandData.get("phase-level").getAsInt();
                         int phaseBlock = islandData.get("phase-block").getAsInt();
-                        int phaseLoop = islandData.get("phase-loop").getAsInt();
-                        setPhaseData(islandUUID, new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop));
+                        int phaseLoop = islandData.has("phase-loop") ? islandData.get("phase-loop").getAsInt() : 0;
+                        Map<String, IslandPhaseData.OneBlockLocation> oneBlockLocations = new ConcurrentHashMap<>();
+                        if (islandData.has("oneblock-locations")) {
+                            JsonObject oneBlockLocationsObject = islandData.getAsJsonObject("oneblock-locations");
+                            for (Map.Entry<String, JsonElement> entry : oneBlockLocationsObject.entrySet()) {
+                                JsonElement locationElement = entry.getValue();
+                                if (locationElement != null && locationElement.isJsonArray()) {
+                                    JsonArray locationArray = locationElement.getAsJsonArray();
+                                    if (locationArray.size() >= 3) {
+                                        int x = locationArray.get(0).getAsInt();
+                                        int y = locationArray.get(1).getAsInt();
+                                        int z = locationArray.get(2).getAsInt();
+                                        oneBlockLocations.put(entry.getKey(), new IslandPhaseData.OneBlockLocation(x, y, z));
+                                    }
+                                }
+                            }
+                        }
+                        setPhaseData(islandUUID, new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop, oneBlockLocations));
                     } catch (Throwable error) {
                         OneBlockModule.log("Failed to parse data for element: " + islandDataElement);
                         error.printStackTrace();
@@ -86,11 +102,25 @@ public final class FlatDataStore implements DataStore {
 
         for (Island island : SuperiorSkyblockAPI.getGrid().getIslands()) {
             IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, false);
-            if (islandPhaseData != null && (islandPhaseData.getPhaseBlock() > 0 || islandPhaseData.getPhaseLevel() > 0)) {
+            if (islandPhaseData != null && (islandPhaseData.getPhaseBlock() > 0 ||
+                    islandPhaseData.getPhaseLevel() > 0 || !islandPhaseData.getOneBlockLocations().isEmpty())) {
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.addProperty("island", island.getUniqueId() + "");
                 jsonObject.addProperty("phase-level", islandPhaseData.getPhaseLevel());
                 jsonObject.addProperty("phase-block", islandPhaseData.getPhaseBlock());
+                jsonObject.addProperty("phase-loop", islandPhaseData.getPhaseLoopTimes());
+                if (!islandPhaseData.getOneBlockLocations().isEmpty()) {
+                    JsonObject oneBlockLocationsObject = new JsonObject();
+                    for (Map.Entry<String, IslandPhaseData.OneBlockLocation> entry : islandPhaseData.getOneBlockLocations().entrySet()) {
+                        IslandPhaseData.OneBlockLocation location = entry.getValue();
+                        JsonArray locationArray = new JsonArray();
+                        locationArray.add(location.getX());
+                        locationArray.add(location.getY());
+                        locationArray.add(location.getZ());
+                        oneBlockLocationsObject.add(entry.getKey(), locationArray);
+                    }
+                    jsonObject.add("oneblock-locations", oneBlockLocationsObject);
+                }
                 islandData.add(jsonObject);
             }
         }

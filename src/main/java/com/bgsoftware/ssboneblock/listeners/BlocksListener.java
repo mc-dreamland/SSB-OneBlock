@@ -115,7 +115,7 @@ public final class BlocksListener implements Listener {
 
             SuperiorPlayer superiorPlayer = module.getPlugin().getPlayers().getSuperiorPlayer(e.getPlayer());
             block.setType(Material.AIR);
-            module.getPhasesHandler().runNextAction(island, superiorPlayer);
+            module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation);
 
             if (barrierPlacement)
                 underBlock.setType(Material.AIR);
@@ -156,7 +156,7 @@ public final class BlocksListener implements Listener {
         WorldUtils.lookupOneBlock(blockLocation, (oneBlockLocation, island) -> {
             if (module.getSettings().gravity)
                 Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
-                        module.getPhasesHandler().runNextAction(island, null), 20L);
+                        module.getPhasesHandler().runNextAction(island, null, oneBlockLocation), 20L);
             else
                 e.setCancelled(true);
         });
@@ -166,7 +166,7 @@ public final class BlocksListener implements Listener {
     public void onOneBlockBurn(BlockBurnEvent e) {
         WorldUtils.lookupOneBlock(e.getBlock().getLocation(), (oneBlockLocation, island) ->
                 Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
-                        module.getPhasesHandler().runNextAction(island, null), 20L));
+                        module.getPhasesHandler().runNextAction(island, null, oneBlockLocation), 20L));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -176,7 +176,7 @@ public final class BlocksListener implements Listener {
                 return;
 
             if (oneBlockLocation.getBlock().getType() == Material.BEDROCK)
-                module.getPhasesHandler().runNextAction(island, null);
+                module.getPhasesHandler().runNextAction(island, null, oneBlockLocation);
         });
     }
 
@@ -206,7 +206,7 @@ public final class BlocksListener implements Listener {
             for (Block block : e.blockList()) {
                 if (block.getLocation().equals(oneBlockLocation)) {
                     Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
-                            module.getPhasesHandler().runNextAction(island, superiorPlayer), 1L);
+                            module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation), 1L);
                     break;
                 }
             }

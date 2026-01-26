@@ -24,22 +24,24 @@ public final class NextPhaseTimer extends BukkitRunnable {
     private final List<Hologram> holograms = new LinkedList<>();
     private final Island island;
     private final Runnable onFinish;
+    private final Location oneBlockLocation;
     private short time;
     private boolean runFinishCallback = true;
 
-    public NextPhaseTimer(Island island, short time, Runnable onFinish) {
+    public NextPhaseTimer(Island island, short time, Location oneBlockLocation, Runnable onFinish) {
         NextPhaseTimer oldTimer = timers.put(island.getUniqueId(), this);
         if (oldTimer != null)
             oldTimer.cancel();
 
         this.island = island;
         this.time = time;
+        this.oneBlockLocation = oneBlockLocation == null ? null : oneBlockLocation.clone();
         this.onFinish = onFinish;
 
-        Location oneBlockLocation = WorldUtils.getOneBlock(island);
+        Location baseLocation = this.oneBlockLocation == null ? WorldUtils.getOneBlock(island) : this.oneBlockLocation;
 
         for (String name : module.getSettings().timerFormat) {
-            Hologram hologram = createHologram(oneBlockLocation, this.holograms.size());
+            Hologram hologram = createHologram(baseLocation, this.holograms.size());
             if (hologram != null) {
                 hologram.setHologramName(name.replace("{0}", time + ""));
                 this.holograms.add(hologram);
@@ -64,18 +66,18 @@ public final class NextPhaseTimer extends BukkitRunnable {
 
         time--;
 
-        Location oneBlockLocation = null;
+        Location baseLocation = this.oneBlockLocation;
 
         ListIterator<Hologram> iterator = this.holograms.listIterator();
         while (iterator.hasNext()) {
             Hologram hologram = iterator.next();
 
             if (!hologram.getHandle().isValid()) {
-                if (oneBlockLocation == null) {
-                    oneBlockLocation = WorldUtils.getOneBlock(island);
+                if (baseLocation == null) {
+                    baseLocation = WorldUtils.getOneBlock(island);
                 }
 
-                hologram = createHologram(oneBlockLocation, hologramCounter);
+                hologram = createHologram(baseLocation, hologramCounter);
                 iterator.set(hologram);
             }
 
@@ -108,6 +110,9 @@ public final class NextPhaseTimer extends BukkitRunnable {
     }
 
     private static Hologram createHologram(Location firstLocation, int index) {
+        if (firstLocation == null) {
+            return null;
+        }
         Location hologramLocation = firstLocation.clone().add(0.5, 2 + (index * 0.3), 0.5);
         return HologramFactory.createHologram(hologramLocation);
     }

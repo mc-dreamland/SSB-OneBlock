@@ -7,6 +7,7 @@ import com.bgsoftware.ssboneblock.commands.CommandsHandler;
 import com.bgsoftware.ssboneblock.data.DataType;
 import com.bgsoftware.ssboneblock.data.FlatDataStore;
 import com.bgsoftware.ssboneblock.data.SqlDataStore;
+import com.bgsoftware.ssboneblock.handler.OneBlockUnlocksHandler;
 import com.bgsoftware.ssboneblock.handler.PhasesHandler;
 import com.bgsoftware.ssboneblock.handler.SettingsHandler;
 import com.bgsoftware.ssboneblock.lang.Message;
@@ -40,6 +41,7 @@ public final class OneBlockModule extends PluginModule {
     private PhasesHandler phasesHandler;
     private SettingsHandler settingsHandler;
     private NMSAdapter nmsAdapter;
+    private final OneBlockUnlocksHandler oneBlockUnlocksHandler = new OneBlockUnlocksHandler(this);
 
     public OneBlockModule() {
         super("OneBlock", "Ome_R");
@@ -90,7 +92,7 @@ public final class OneBlockModule extends PluginModule {
 
         this.settingsHandler = new SettingsHandler(this);
         this.phasesHandler = new PhasesHandler(this, this.phasesHandler != null ? this.phasesHandler.getDataStore() :
-                this.settingsHandler.dataType == DataType.FLAT ? new FlatDataStore(this) : new SqlDataStore());
+                (this.settingsHandler.dataType == DataType.FLAT ? new FlatDataStore(this) : new SqlDataStore()));
 
         Message.reload();
     }
@@ -152,6 +154,10 @@ public final class OneBlockModule extends PluginModule {
 
     public NMSAdapter getNMSAdapter() {
         return nmsAdapter;
+    }
+
+    public OneBlockUnlocksHandler getOneBlockUnlocksHandler() {
+        return oneBlockUnlocksHandler;
     }
 
     public SuperiorSkyblock getPlugin() {
@@ -316,6 +322,13 @@ public final class OneBlockModule extends PluginModule {
                 return "";
 
             return phaseData.getName();
+        });
+
+        placeholdersService.registerPlaceholder("oneblock_unlocked_blocks", (island, superiorPlayer) -> {
+            if (island == null)
+                return null;
+
+            return String.valueOf(oneBlockUnlocksHandler.getUnlockedCount(island));
         });
 
     }

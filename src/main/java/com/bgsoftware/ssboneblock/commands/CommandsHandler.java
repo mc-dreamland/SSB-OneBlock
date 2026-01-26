@@ -6,6 +6,7 @@ import com.bgsoftware.ssboneblock.commands.commands.CmdReload;
 import com.bgsoftware.ssboneblock.commands.commands.CmdSave;
 import com.bgsoftware.ssboneblock.commands.commands.CmdSetPhase;
 import com.bgsoftware.ssboneblock.commands.commands.CmdSetPhaseBlock;
+import com.bgsoftware.ssboneblock.commands.commands.CmdSetOneBlock;
 import com.bgsoftware.ssboneblock.lang.LocaleUtils;
 import com.bgsoftware.ssboneblock.lang.Message;
 import org.bukkit.command.Command;
@@ -32,6 +33,7 @@ public final class CommandsHandler extends Command {
         subCommands.add(new CmdSave());
         subCommands.add(new CmdSetPhase());
         subCommands.add(new CmdSetPhaseBlock());
+        subCommands.add(new CmdSetOneBlock());
     }
 
     @Override

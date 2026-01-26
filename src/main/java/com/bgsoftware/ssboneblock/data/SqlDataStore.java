@@ -80,13 +80,37 @@ public final class SqlDataStore implements DataStore {
             data.writeInt(islandPhaseData.getPhaseLevel());
             data.writeInt(islandPhaseData.getPhaseBlock());
             data.writeInt(islandPhaseData.getPhaseLoopTimes());
+            data.writeInt(islandPhaseData.getOneBlockLocations().size());
+            for (java.util.Map.Entry<String, IslandPhaseData.OneBlockLocation> entry : islandPhaseData.getOneBlockLocations().entrySet()) {
+                IslandPhaseData.OneBlockLocation location = entry.getValue();
+                data.writeUTF(entry.getKey());
+                data.writeInt(location.getX());
+                data.writeInt(location.getY());
+                data.writeInt(location.getZ());
+            }
             return data.toByteArray();
         }
 
         @Override
         public IslandPhaseData deserialize(byte[] bytes) {
             ByteArrayDataInput data = ByteStreams.newDataInput(bytes);
-            return new IslandPhaseData(data.readInt(), data.readInt(), data.readInt());
+            int phaseLevel = data.readInt();
+            int phaseBlock = data.readInt();
+            int phaseLoop = data.readInt();
+            java.util.Map<String, IslandPhaseData.OneBlockLocation> oneBlockLocations = new java.util.HashMap<>();
+            try {
+                int locationsAmount = data.readInt();
+                for (int i = 0; i < locationsAmount; i++) {
+                    String key = data.readUTF();
+                    int x = data.readInt();
+                    int y = data.readInt();
+                    int z = data.readInt();
+                    oneBlockLocations.put(key, new IslandPhaseData.OneBlockLocation(x, y, z));
+                }
+            } catch (Throwable ignored) {
+                // Older data might not include one-block locations.
+            }
+            return new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop, oneBlockLocations);
         }
 
     }
