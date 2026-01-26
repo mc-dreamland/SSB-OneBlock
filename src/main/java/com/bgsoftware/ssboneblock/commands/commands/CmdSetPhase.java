@@ -72,7 +72,7 @@ public final class CmdSetPhase implements ICommand {
             Message.INVALID_NUMBER.send(sender, args[2]);
             return;
         }
-        IslandPhaseData islandPhaseData = plugin.getPhasesHandler().getDataStore().getPhaseData(island, true);
+        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
 
         if (phaseLevel <= 0 || !module.getPhasesHandler().setPhaseLevel(island, phaseLevel - 1, island.getOwner(), islandPhaseData.getPhaseLoopTimes())) {
             Message.SET_PHASE_FAILURE.send(sender, phaseLevel);

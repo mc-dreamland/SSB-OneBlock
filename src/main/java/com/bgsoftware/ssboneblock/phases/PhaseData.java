@@ -57,7 +57,7 @@ public final class PhaseData {
     public Action getAction(int block, int loopTimes) {
 
         // 先检查是否在合法范围内
-        if (block < 0 || block > (this.end - this.start) * Math.pow(OneBlockModule.getPlugin().getSettings().phasesLoopMultiple, loopTimes)) {
+        if (block < 0 || block > (this.end - this.start) * Math.pow(OneBlockModule.getModule().getSettings().phasesLoopMultiple, loopTimes)) {
             return null;
         }
 
@@ -115,7 +115,7 @@ public final class PhaseData {
         String name = jsonObject.has("name") ? jsonObject.get("name").getAsString() : fileName.split("\\.")[0];
         int start = 0;
         int end = 0;
-        for (Pair<String, Integer> phase : OneBlockModule.getPlugin().getSettings().phases) {
+        for (Pair<String, Integer> phase : OneBlockModule.getModule().getSettings().phases) {
             if (!fileName.equals(phase.first)) {
                 start = phase.second + 1;
                 continue;

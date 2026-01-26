@@ -97,9 +97,9 @@ public final class PhasesHandler {
 
         if (action == null) {
             int nextPhaseLevel = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
-                    islandPhaseData.getPhaseLevel() + 1 : module.getSettings().phasesLoop ? 0 : -1;
+                    islandPhaseData.getPhaseLevel() + 1 : (module.getSettings().phasesLoop ? 0 : -1);
             int loopTimes = islandPhaseData.getPhaseLevel() + 1 < this.phaseData.length ?
-                    islandPhaseData.getPhaseLoopTimes() : module.getSettings().phasesLoop ? islandPhaseData.getPhaseLoopTimes() + 1 : 0;
+                    islandPhaseData.getPhaseLoopTimes() :( module.getSettings().phasesLoop ? islandPhaseData.getPhaseLoopTimes() + 1 : 0);
 
             runNextActionTimer(island, superiorPlayer, oneBlockLocation, phaseData, nextPhaseLevel, loopTimes);
             return;
@@ -118,7 +118,7 @@ public final class PhasesHandler {
             this.dataStore.setPhaseData(island, islandPhaseData.nextBlock());
 
         Message.PHASE_PROGRESS.send(superiorPlayer,
-                String.format("%.1f", islandPhaseData.getPhaseBlock() * 100.0D / ((phaseData.getEnd() - phaseData.getStart()) * Math.pow(OneBlockModule.getPlugin().getSettings().phasesLoopMultiple, islandPhaseData.getPhaseLoopTimes()))),
+                String.format("%.1f", islandPhaseData.getPhaseBlock() * 100.0D / ((phaseData.getEnd() - phaseData.getStart()) * Math.pow(OneBlockModule.getModule().getSettings().phasesLoopMultiple, islandPhaseData.getPhaseLoopTimes()))),
                 islandPhaseData.getPhaseBlock(),
                 phaseData.getActionsSize());
 
