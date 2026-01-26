@@ -2,6 +2,7 @@ package com.bgsoftware.ssboneblock.data;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
+import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.ssboneblock.utils.JsonUtils;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
@@ -27,8 +28,16 @@ public final class FlatDataStore implements DataStore {
 
     @Override
     public IslandPhaseData getPhaseData(Island island, boolean createNew) {
-        return !createNew ? this.islandPhaseData.get(island.getUniqueId()) :
-                this.islandPhaseData.computeIfAbsent(island.getUniqueId(), v -> new IslandPhaseData(0, 0, 0));
+        if (!createNew)
+            return this.islandPhaseData.get(island.getUniqueId());
+
+        IslandPhaseData phaseData = this.islandPhaseData.computeIfAbsent(island.getUniqueId(), v -> buildDefaultPhaseData(island));
+        IslandPhaseData ensured = ensureDefaultUnlock(island, phaseData);
+        if (ensured != phaseData) {
+            setPhaseData(island, ensured);
+            return ensured;
+        }
+        return phaseData;
     }
 
     @Override
@@ -65,26 +74,11 @@ public final class FlatDataStore implements DataStore {
                     try {
                         JsonObject islandData = (JsonObject) islandDataElement;
                         UUID islandUUID = UUID.fromString(islandData.get("island").getAsString());
-                        int phaseLevel = islandData.get("phase-level").getAsInt();
-                        int phaseBlock = islandData.get("phase-block").getAsInt();
-                        int phaseLoop = islandData.has("phase-loop") ? islandData.get("phase-loop").getAsInt() : 0;
-                        Map<String, IslandPhaseData.OneBlockLocation> oneBlockLocations = new ConcurrentHashMap<>();
-                        if (islandData.has("oneblock-locations")) {
-                            JsonObject oneBlockLocationsObject = islandData.getAsJsonObject("oneblock-locations");
-                            for (Map.Entry<String, JsonElement> entry : oneBlockLocationsObject.entrySet()) {
-                                JsonElement locationElement = entry.getValue();
-                                if (locationElement != null && locationElement.isJsonArray()) {
-                                    JsonArray locationArray = locationElement.getAsJsonArray();
-                                    if (locationArray.size() >= 3) {
-                                        int x = locationArray.get(0).getAsInt();
-                                        int y = locationArray.get(1).getAsInt();
-                                        int z = locationArray.get(2).getAsInt();
-                                        oneBlockLocations.put(entry.getKey(), new IslandPhaseData.OneBlockLocation(x, y, z));
-                                    }
-                                }
-                            }
+                        IslandPhaseData parsed = OneBlockDataCodec.fromJson(islandData);
+                        if (parsed != null) {
+                            IslandPhaseData ensured = ensureDefaultUnlock(SuperiorSkyblockAPI.getIslandByUUID(islandUUID), parsed);
+                            setPhaseData(islandUUID, ensured);
                         }
-                        setPhaseData(islandUUID, new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop, oneBlockLocations));
                     } catch (Throwable error) {
                         OneBlockModule.log("Failed to parse data for element: " + islandDataElement);
                         error.printStackTrace();
@@ -102,25 +96,19 @@ public final class FlatDataStore implements DataStore {
 
         for (Island island : SuperiorSkyblockAPI.getGrid().getIslands()) {
             IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, false);
-            if (islandPhaseData != null && (islandPhaseData.getPhaseBlock() > 0 ||
-                    islandPhaseData.getPhaseLevel() > 0 || !islandPhaseData.getOneBlockLocations().isEmpty())) {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.addProperty("island", island.getUniqueId() + "");
-                jsonObject.addProperty("phase-level", islandPhaseData.getPhaseLevel());
-                jsonObject.addProperty("phase-block", islandPhaseData.getPhaseBlock());
-                jsonObject.addProperty("phase-loop", islandPhaseData.getPhaseLoopTimes());
-                if (!islandPhaseData.getOneBlockLocations().isEmpty()) {
-                    JsonObject oneBlockLocationsObject = new JsonObject();
-                    for (Map.Entry<String, IslandPhaseData.OneBlockLocation> entry : islandPhaseData.getOneBlockLocations().entrySet()) {
-                        IslandPhaseData.OneBlockLocation location = entry.getValue();
-                        JsonArray locationArray = new JsonArray();
-                        locationArray.add(location.getX());
-                        locationArray.add(location.getY());
-                        locationArray.add(location.getZ());
-                        oneBlockLocationsObject.add(entry.getKey(), locationArray);
-                    }
-                    jsonObject.add("oneblock-locations", oneBlockLocationsObject);
+            if (islandPhaseData != null) {
+                IslandPhaseData cleaned = OneBlockDataCodec.cleanupExpiredUnlocks(islandPhaseData);
+                if (cleaned != islandPhaseData) {
+                    module.getPhasesHandler().getDataStore().setPhaseData(island, cleaned);
+                    islandPhaseData = cleaned;
                 }
+            }
+            if (islandPhaseData != null && (islandPhaseData.getPhaseBlock() > 0 ||
+                    islandPhaseData.getPhaseLevel() > 0 ||
+                    !islandPhaseData.getUnlocks().isEmpty() ||
+                    !islandPhaseData.getApiUnlocks().isEmpty())) {
+                JsonObject jsonObject = OneBlockDataCodec.toJson(islandPhaseData);
+                jsonObject.addProperty("island", island.getUniqueId() + "");
                 islandData.add(jsonObject);
             }
         }
@@ -152,6 +140,37 @@ public final class FlatDataStore implements DataStore {
             newFile.getParentFile().mkdirs();
             oldFile.renameTo(newFile);
         }
+    }
+
+    private IslandPhaseData buildDefaultPhaseData(Island island) {
+        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> unlocks = new ConcurrentHashMap<>();
+        IslandPhaseData.OneBlockLocation defaultLocation = WorldUtils.getDefaultOneBlockLocation(island);
+        String defaultKey = WorldUtils.getDefaultDimensionKey();
+        if (defaultLocation != null && defaultKey != null && !defaultKey.isEmpty()) {
+            java.util.List<IslandPhaseData.OneBlockSlotData> list = new java.util.ArrayList<>();
+            list.add(new IslandPhaseData.OneBlockSlotData(defaultLocation, null));
+            unlocks.put(defaultKey, list);
+        }
+        return new IslandPhaseData(0, 0, 0, unlocks, java.util.Collections.emptyMap());
+    }
+
+    private IslandPhaseData ensureDefaultUnlock(Island island, IslandPhaseData phaseData) {
+        if (phaseData == null)
+            return null;
+        String defaultKey = WorldUtils.getDefaultDimensionKey();
+        if (defaultKey == null || defaultKey.isEmpty())
+            return phaseData;
+        java.util.List<IslandPhaseData.OneBlockSlotData> slots = phaseData.getUnlocks()
+                .get(defaultKey.toUpperCase());
+        boolean needsDefault = slots == null || slots.isEmpty();
+        if (!needsDefault)
+            return phaseData;
+
+        IslandPhaseData.OneBlockLocation defaultLocation = WorldUtils.getDefaultOneBlockLocation(island);
+        if (defaultLocation == null)
+            return phaseData;
+
+        return phaseData.withUnlockLocation(defaultKey, 0, defaultLocation, false);
     }
 
 }

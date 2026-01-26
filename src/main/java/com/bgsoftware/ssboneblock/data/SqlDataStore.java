@@ -1,15 +1,17 @@
 package com.bgsoftware.ssboneblock.data;
 
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
+import com.bgsoftware.ssboneblock.utils.JsonUtils;
+import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataType;
 import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataTypeContext;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 public final class SqlDataStore implements DataStore {
@@ -23,10 +25,17 @@ public final class SqlDataStore implements DataStore {
         IslandPhaseData islandPhaseData = island.getPersistentDataContainer().get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
 
         if (islandPhaseData != null || !createNew) {
+            if (createNew) {
+                IslandPhaseData ensured = ensureDefaultLocation(island, islandPhaseData);
+                if (ensured != islandPhaseData) {
+                    setPhaseData(island, ensured);
+                    return ensured;
+                }
+            }
             return islandPhaseData;
         }
 
-        islandPhaseData = new IslandPhaseData(0, 0, 0);
+        islandPhaseData = buildDefaultPhaseData(island);
         setPhaseData(island, islandPhaseData);
         return islandPhaseData;
     }
@@ -76,43 +85,56 @@ public final class SqlDataStore implements DataStore {
 
         @Override
         public byte[] serialize(IslandPhaseData islandPhaseData) {
-            ByteArrayDataOutput data = ByteStreams.newDataOutput();
-            data.writeInt(islandPhaseData.getPhaseLevel());
-            data.writeInt(islandPhaseData.getPhaseBlock());
-            data.writeInt(islandPhaseData.getPhaseLoopTimes());
-            data.writeInt(islandPhaseData.getOneBlockLocations().size());
-            for (java.util.Map.Entry<String, IslandPhaseData.OneBlockLocation> entry : islandPhaseData.getOneBlockLocations().entrySet()) {
-                IslandPhaseData.OneBlockLocation location = entry.getValue();
-                data.writeUTF(entry.getKey());
-                data.writeInt(location.getX());
-                data.writeInt(location.getY());
-                data.writeInt(location.getZ());
-            }
-            return data.toByteArray();
+            IslandPhaseData cleaned = OneBlockDataCodec.cleanupExpiredUnlocks(islandPhaseData);
+            String json = JsonUtils.getGson().toJson(OneBlockDataCodec.toJson(cleaned));
+            return json.getBytes(StandardCharsets.UTF_8);
         }
 
         @Override
         public IslandPhaseData deserialize(byte[] bytes) {
-            ByteArrayDataInput data = ByteStreams.newDataInput(bytes);
-            int phaseLevel = data.readInt();
-            int phaseBlock = data.readInt();
-            int phaseLoop = data.readInt();
-            java.util.Map<String, IslandPhaseData.OneBlockLocation> oneBlockLocations = new java.util.HashMap<>();
             try {
-                int locationsAmount = data.readInt();
-                for (int i = 0; i < locationsAmount; i++) {
-                    String key = data.readUTF();
-                    int x = data.readInt();
-                    int y = data.readInt();
-                    int z = data.readInt();
-                    oneBlockLocations.put(key, new IslandPhaseData.OneBlockLocation(x, y, z));
-                }
+                String json = new String(bytes, StandardCharsets.UTF_8);
+                com.google.gson.JsonObject parsed = JsonUtils.getGson().fromJson(json, com.google.gson.JsonObject.class);
+                IslandPhaseData data = OneBlockDataCodec.fromJson(parsed);
+                return data == null ? new IslandPhaseData(0, 0, 0) : data;
             } catch (Throwable ignored) {
-                // Older data might not include one-block locations.
+                ByteArrayDataInput data = ByteStreams.newDataInput(bytes);
+                int phaseLevel = data.readInt();
+                int phaseBlock = data.readInt();
+                int phaseLoop = data.readInt();
+                return new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop);
             }
-            return new IslandPhaseData(phaseLevel, phaseBlock, phaseLoop, oneBlockLocations);
         }
 
+    }
+
+    private IslandPhaseData buildDefaultPhaseData(Island island) {
+        java.util.Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> unlocks = new java.util.HashMap<>();
+        IslandPhaseData.OneBlockLocation defaultLocation = WorldUtils.getDefaultOneBlockLocation(island);
+        String defaultKey = WorldUtils.getDefaultDimensionKey();
+        if (defaultLocation != null && defaultKey != null && !defaultKey.isEmpty()) {
+            java.util.List<IslandPhaseData.OneBlockSlotData> list = new java.util.ArrayList<>();
+            list.add(new IslandPhaseData.OneBlockSlotData(defaultLocation, null));
+            unlocks.put(defaultKey, list);
+        }
+        return new IslandPhaseData(0, 0, 0, unlocks, java.util.Collections.emptyMap());
+    }
+
+    private IslandPhaseData ensureDefaultLocation(Island island, IslandPhaseData phaseData) {
+        String defaultKey = WorldUtils.getDefaultDimensionKey();
+        if (defaultKey == null || defaultKey.isEmpty())
+            return phaseData;
+        java.util.List<IslandPhaseData.OneBlockSlotData> slots = phaseData.getUnlocks()
+                .get(defaultKey.toUpperCase());
+        boolean needsDefault = slots == null || slots.isEmpty();
+        if (!needsDefault)
+            return phaseData;
+
+        IslandPhaseData.OneBlockLocation defaultLocation = WorldUtils.getDefaultOneBlockLocation(island);
+        if (defaultLocation == null)
+            return phaseData;
+
+        return phaseData.withUnlockLocation(defaultKey, 0, defaultLocation, false);
     }
 
 }

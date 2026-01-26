@@ -6,7 +6,7 @@
 ######################################################
 
 COMMAND_ARGUMENT_ISLAND_NAME: island-name
-COMMAND_ARGUMENT_ONEBLOCK_ID: oneblock-id
+COMMAND_ARGUMENT_DURATION: duration
 COMMAND_ARGUMENT_PHASE_BLOCK: phase-block
 COMMAND_ARGUMENT_PHASE_LEVEL: phase-level
 COMMAND_ARGUMENT_PLAYER_NAME: player-name
@@ -14,6 +14,7 @@ COMMAND_DESCRIPTION_CHECK: 'Check progress of a player.'
 COMMAND_DESCRIPTION_RELOAD: 'Reload all settings of the plugin.'
 COMMAND_DESCRIPTION_SAVE: 'Save all data to disk.'
 COMMAND_DESCRIPTION_SET_ONEBLOCK: '设置本岛单方块位置.'
+COMMAND_DESCRIPTION_UNLOCK_ONEBLOCK: '为本岛解锁额外单方块.'
 COMMAND_DESCRIPTION_SET_PHASE: 'Set the phase for a specific player.'
 COMMAND_DESCRIPTION_SET_PHASE_BLOCK: 'Set the phase-block for a specific player.'
 COMMAND_USAGE: '&c命令用法: /{0}'
@@ -25,13 +26,16 @@ INVALID_NUMBER: '&c&l错误 | &7无效数字 {0}.'
 ISLAND_MISSING_BLOCK: '&c&l错误 | &7该岛屿不可设置单方块空岛.'
 NO_MORE_PHASES: '&e&l岛屿 | &7你已到达最终阶段.'
 NO_PERMISSION: '&f未知命令. 请输入 \"/help\" 获取帮助.'
-ONEBLOCK_NOT_UNLOCKED: '&c&l错误 | &7单方块 {0} 尚未解锁.'
+ONEBLOCK_DUPLICATE_LOCATION: '&c&l错误 | &7已有单方块在坐标 {0}, {1}, {2}.'
+ONEBLOCK_UNLOCK_SUCCESS: '&e&l岛屿 | &7已解锁 {0} 维度的单方块.'
+ONEBLOCK_UNLOCK_SUCCESS_TIMED: '&e&l岛屿 | &7已解锁 {0} 维度的单方块，持续 {1}.'
+INVALID_DURATION: '&c&l错误 | &7无效时间 {0}. 可用 s/m/h/d.'
 PHASE_PROGRESS:
   action-bar:
     text: '&6进度: {0}% &7({1}/{2})'
 RELOAD_FILES: '&e&lIsland | &7Successfully reloaded all files in {0}ms.'
 SAVE_DATA: '&e&lIsland | &7Successfully saved all data in {0}ms.'
-SET_ONEBLOCK_SUCCESS: '&e&l岛屿 | &7已将单方块 {0} 在 {1} 设置为 {2}, {3}, {4}.'
+SET_ONEBLOCK_SUCCESS: '&e&l岛屿 | &7已将 {0} 维度单方块设置为 {1}, {2}, {3}.'
 SET_PHASE_BLOCK_FAILURE: '&c&l错误 | &7你不能将阶段方块设置为 {0}.'
 SET_PHASE_BLOCK_SUCCESS: '&e&l岛屿 | &7成功将阶段方块从 {0} 修改为 {1}.'
 SET_PHASE_FAILURE: '&c&l错误 | &7你不能将阶段等级设置为 {0}.'

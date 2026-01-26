@@ -2,19 +2,13 @@ package com.bgsoftware.ssboneblock.commands.commands;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.commands.ICommand;
+import com.bgsoftware.ssboneblock.gui.OneBlockMenu;
 import com.bgsoftware.ssboneblock.lang.Message;
-import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
-import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
-import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class CmdSetOneBlock implements ICommand {
 
@@ -25,7 +19,7 @@ public final class CmdSetOneBlock implements ICommand {
 
     @Override
     public String getUsage(java.util.Locale locale) {
-        return "setoneblock [" + Message.COMMAND_ARGUMENT_ONEBLOCK_ID.getMessage(locale) + "]";
+        return "setoneblock";
     }
 
     @Override
@@ -45,7 +39,7 @@ public final class CmdSetOneBlock implements ICommand {
 
     @Override
     public int getMaxArgs() {
-        return 2;
+        return 1;
     }
 
     @Override
@@ -75,49 +69,12 @@ public final class CmdSetOneBlock implements ICommand {
             return;
         }
 
-        int id = 0;
-        if (args.length > 1) {
-            try {
-                id = Integer.parseInt(args[1]);
-            } catch (Exception ex) {
-                Message.INVALID_NUMBER.send(sender, args[1]);
-                return;
-            }
-        }
-
-        if (id < 0) {
-            Message.INVALID_NUMBER.send(sender, id);
-            return;
-        }
-
-        String dimensionKey = WorldUtils.getDimensionKey(player.getLocation());
-        if (!module.getOneBlockUnlocksHandler().isUnlocked(island, dimensionKey, id)) {
-            Message.ONEBLOCK_NOT_UNLOCKED.send(sender, id);
-            return;
-        }
-
-        Location targetLocation = player.getLocation().clone().subtract(0, 1, 0).getBlock().getLocation();
-        String key = WorldUtils.buildOneBlockKey(dimensionKey, id);
-        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
-        IslandPhaseData.OneBlockLocation oneBlockLocation = new IslandPhaseData.OneBlockLocation(
-                targetLocation.getBlockX(), targetLocation.getBlockY(), targetLocation.getBlockZ());
-        module.getPhasesHandler().getDataStore().setPhaseData(island, islandPhaseData.withOneBlockLocation(key, oneBlockLocation));
-
-        targetLocation.getBlock().setType(Material.STONE);
-
-        Message.SET_ONEBLOCK_SUCCESS.send(sender, id, dimensionKey,
-                targetLocation.getBlockX(), targetLocation.getBlockY(), targetLocation.getBlockZ());
+        OneBlockMenu.open(module, player, island);
     }
 
     @Override
-    public List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
-        List<String> list = new ArrayList<>();
-
-        if (args.length == 2) {
-            list.add("0");
-        }
-
-        return list;
+    public java.util.List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
+        return java.util.Collections.emptyList();
     }
 
 }

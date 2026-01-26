@@ -156,7 +156,8 @@ public final class PhasesHandler {
             return false;
 
         IslandPhaseData existingPhaseData = this.dataStore.getPhaseData(island, true);
-        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0, loopTimes, existingPhaseData.getOneBlockLocations());
+        IslandPhaseData islandPhaseData = new IslandPhaseData(phaseLevel, 0, loopTimes,
+                existingPhaseData.getUnlocks(), existingPhaseData.getApiUnlocks());
         this.dataStore.setPhaseData(island, islandPhaseData);
 
         runNextAction(island, superiorPlayer, oneBlockLocation);
@@ -172,7 +173,7 @@ public final class PhasesHandler {
             return false;
 
         this.dataStore.setPhaseData(island, new IslandPhaseData(islandPhaseData.getPhaseLevel(), phaseBlock,
-                islandPhaseData.getPhaseLoopTimes(), islandPhaseData.getOneBlockLocations()));
+                islandPhaseData.getPhaseLoopTimes(), islandPhaseData.getUnlocks(), islandPhaseData.getApiUnlocks()));
         runNextAction(island, superiorPlayer, null);
 
         return true;

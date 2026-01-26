@@ -1,7 +1,6 @@
 package com.bgsoftware.ssboneblock.utils;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
-import com.bgsoftware.ssboneblock.api.OneBlockSlot;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.world.Dimension;
@@ -11,10 +10,7 @@ import org.bukkit.World;
 import org.bukkit.inventory.InventoryHolder;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 public class WorldUtils {
@@ -47,7 +43,9 @@ public class WorldUtils {
     public static void lookupOneBlock(Location location, BiConsumer<Location, Island> consumer) {
         Island islandAtLocation = module.getPlugin().getGrid().getIslandAt(location);
         lookupOneBlockWithIsland(islandAtLocation, (oneBlockLocation, island) -> {
-            if (oneBlockLocation.equals(location))
+            if (oneBlockLocation.getBlockX() == location.getBlockX()
+                    && oneBlockLocation.getBlockY() == location.getBlockY()
+                    && oneBlockLocation.getBlockZ() == location.getBlockZ())
                 consumer.accept(oneBlockLocation, island);
         });
     }
@@ -71,10 +69,6 @@ public class WorldUtils {
         }
     }
 
-    public static String buildOneBlockKey(String dimensionKey, int id) {
-        return dimensionKey.toUpperCase(Locale.ENGLISH) + "-" + id;
-    }
-
     public static String getDimensionKey(Location location) {
         World world = location.getWorld();
         return world == null ? "" : world.getEnvironment().name();
@@ -86,24 +80,33 @@ public class WorldUtils {
     }
 
     @Nullable
-    public static Location getOneBlock(Island island, String dimensionKey, int id) {
+    public static Location getOneBlock(Island island, String dimensionKey, int index) {
         if (island == null)
             return null;
 
-        String key = buildOneBlockKey(dimensionKey, id);
-        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, false);
-        if (islandPhaseData != null) {
-            IslandPhaseData.OneBlockLocation stored = islandPhaseData.getOneBlockLocations().get(key);
-            if (stored != null) {
-                return toLocation(island, dimensionKey, stored);
-            }
+        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
+        IslandPhaseData ensured = ensureDefaultLocation(island, islandPhaseData);
+        if (ensured != null)
+            islandPhaseData = ensured;
+        String normalizedKey = dimensionKey.toUpperCase(Locale.ENGLISH);
+        java.util.List<IslandPhaseData.OneBlockSlotData> unlocks = module.getOneBlockUnlocksHandler().getUnlocks(island)
+                .get(normalizedKey);
+        java.util.List<IslandPhaseData.OneBlockSlotData> apiUnlocks = islandPhaseData.getApiUnlocks()
+                .get(normalizedKey);
+        int unlockSize = unlocks == null ? 0 : unlocks.size();
+        if (index < 0)
+            return null;
+        if (unlocks != null && index < unlocks.size()) {
+            IslandPhaseData.OneBlockSlotData slot = unlocks.get(index);
+            if (slot != null && slot.getLocation() != null)
+                return toLocation(island, normalizedKey, slot.getLocation());
+            return null;
         }
-
-        if (id == 0 && key.equalsIgnoreCase(buildOneBlockKey(getDefaultDimensionKey(), 0))) {
-            Location islandCenter = island.getCenter(module.getPlugin().getSettings().getWorlds().getDefaultWorldDimension());
-            if (islandCenter == null)
-                return null;
-            return module.getSettings().blockOffset.applyToLocation(islandCenter.subtract(0.5, 0, 0.5));
+        int apiIndex = index - unlockSize;
+        if (apiUnlocks != null && apiIndex >= 0 && apiIndex < apiUnlocks.size()) {
+            IslandPhaseData.OneBlockSlotData slot = apiUnlocks.get(apiIndex);
+            if (slot != null && slot.getLocation() != null)
+                return toLocation(island, normalizedKey, slot.getLocation());
         }
 
         return null;
@@ -114,40 +117,51 @@ public class WorldUtils {
             return Collections.emptyList();
 
         List<Location> locations = new ArrayList<>();
-        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, false);
-        String defaultKey = buildOneBlockKey(getDefaultDimensionKey(), 0);
-
-        IslandPhaseData.OneBlockLocation defaultLocation = null;
-        if (islandPhaseData != null) {
-            defaultLocation = islandPhaseData.getOneBlockLocations().get(defaultKey);
-        }
-
-        Location resolvedDefault = defaultLocation == null ? getOneBlock(island, getDefaultDimensionKey(), 0) :
-                toLocation(island, getDefaultDimensionKey(), defaultLocation);
-        if (resolvedDefault != null) {
-            locations.add(resolvedDefault);
-        }
-
-        if (islandPhaseData == null || islandPhaseData.getOneBlockLocations().isEmpty())
-            return locations;
-
-        for (java.util.Map.Entry<String, IslandPhaseData.OneBlockLocation> entry : islandPhaseData.getOneBlockLocations().entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(defaultKey))
-                continue;
-
-            OneBlockSlot slot = OneBlockSlot.fromKey(entry.getKey());
-            if (slot == null)
-                continue;
-
-            if (!module.getOneBlockUnlocksHandler().isUnlocked(island, slot))
-                continue;
-
-            Location location = toLocation(island, slot.getDimension(), entry.getValue());
-            if (location != null)
-                locations.add(location);
+        IslandPhaseData islandPhaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
+        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> unlocks = module.getOneBlockUnlocksHandler().getUnlocks(island);
+        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> apiUnlocks = islandPhaseData.getApiUnlocks();
+        java.util.Set<String> dimensionKeys = new java.util.HashSet<>();
+        dimensionKeys.addAll(unlocks.keySet());
+        dimensionKeys.addAll(apiUnlocks.keySet());
+        for (String dimensionKey : dimensionKeys) {
+            java.util.List<IslandPhaseData.OneBlockSlotData> unlockList = unlocks.get(dimensionKey);
+            if (unlockList != null) {
+                for (IslandPhaseData.OneBlockSlotData slot : unlockList) {
+                    if (slot != null && slot.getLocation() != null) {
+                        Location location = toLocation(island, dimensionKey, slot.getLocation());
+                        if (location != null)
+                            locations.add(location);
+                    }
+                }
+            }
+            java.util.List<IslandPhaseData.OneBlockSlotData> apiList = apiUnlocks.get(dimensionKey);
+            if (apiList != null) {
+                for (IslandPhaseData.OneBlockSlotData slot : apiList) {
+                    if (slot != null && slot.getLocation() != null) {
+                        Location location = toLocation(island, dimensionKey, slot.getLocation());
+                        if (location != null)
+                            locations.add(location);
+                    }
+                }
+            }
         }
 
         return locations;
+    }
+
+    public static IslandPhaseData.OneBlockLocation getDefaultOneBlockLocation(Island island) {
+        if (island == null)
+            return null;
+
+        Location islandCenter = island.getCenter(module.getPlugin().getSettings().getWorlds().getDefaultWorldDimension());
+        if (islandCenter == null)
+            return null;
+
+        Location resolved = module.getSettings().blockOffset.applyToLocation(islandCenter.subtract(0.5, 0, 0.5));
+        return new IslandPhaseData.OneBlockLocation(
+                resolved.getBlockX() + 0.5,
+                resolved.getBlockY() + 0.5,
+                resolved.getBlockZ() + 0.5);
     }
 
     @Nullable
@@ -161,6 +175,25 @@ public class WorldUtils {
             return null;
 
         return new Location(islandCenter.getWorld(), position.getX(), position.getY(), position.getZ());
+    }
+
+    private static IslandPhaseData ensureDefaultLocation(Island island, IslandPhaseData islandPhaseData) {
+        String defaultDimension = getDefaultDimensionKey();
+        if (defaultDimension == null || defaultDimension.isEmpty())
+            return islandPhaseData;
+        java.util.List<IslandPhaseData.OneBlockSlotData> slots = islandPhaseData.getUnlocks()
+                .get(defaultDimension.toUpperCase(Locale.ENGLISH));
+        boolean needsDefault = slots == null || slots.isEmpty();
+        if (!needsDefault)
+            return islandPhaseData;
+
+        IslandPhaseData.OneBlockLocation defaultLocation = getDefaultOneBlockLocation(island);
+        if (defaultLocation == null)
+            return islandPhaseData;
+
+        IslandPhaseData updated = islandPhaseData.withUnlockLocation(defaultDimension, 0, defaultLocation, false);
+        module.getPhasesHandler().getDataStore().setPhaseData(island, updated);
+        return updated;
     }
 
     @Nullable

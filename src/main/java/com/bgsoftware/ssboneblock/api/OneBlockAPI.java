@@ -6,6 +6,7 @@ import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class OneBlockAPI {
@@ -45,12 +46,12 @@ public final class OneBlockAPI {
         return module.getOneBlockUnlocksHandler().isUnlocked(island, slot);
     }
 
-    public static boolean isOneBlockUnlocked(Island island, String dimensionKey, int id) {
+    public static boolean isOneBlockUnlocked(Island island, String dimensionKey) {
         OneBlockModule module = OneBlockModule.getModule();
         if (module == null)
             return false;
 
-        return module.getOneBlockUnlocksHandler().isUnlocked(island, dimensionKey, id);
+        return module.getOneBlockUnlocksHandler().isUnlocked(island, dimensionKey);
     }
 
     public static int getUnlockedOneBlocksCount(Island island) {
@@ -59,6 +60,24 @@ public final class OneBlockAPI {
             return 0;
 
         return module.getOneBlockUnlocksHandler().getUnlockedCount(island);
+    }
+
+    public static void setApiUnlockedCount(Island island, String dimensionKey, int count) {
+        OneBlockModule module = OneBlockModule.getModule();
+        if (module == null || island == null)
+            return;
+
+        module.getOneBlockUnlocksHandler().setApiUnlockCount(island, dimensionKey, count);
+    }
+
+    public static boolean unlockOneBlock(Island island, String dimensionKey) {
+        OneBlockModule module = OneBlockModule.getModule();
+        if (module == null)
+            return false;
+
+        int current = module.getOneBlockUnlocksHandler().getApiCounts(island)
+                .getOrDefault(dimensionKey.toUpperCase(java.util.Locale.ENGLISH), 0);
+        return module.getOneBlockUnlocksHandler().setApiUnlockCount(island, dimensionKey, current + 1);
     }
 
 }

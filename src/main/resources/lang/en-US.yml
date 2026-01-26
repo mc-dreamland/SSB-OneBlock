@@ -6,7 +6,7 @@
 ######################################################
 
 COMMAND_ARGUMENT_ISLAND_NAME: island-name
-COMMAND_ARGUMENT_ONEBLOCK_ID: oneblock-id
+COMMAND_ARGUMENT_DURATION: duration
 COMMAND_ARGUMENT_PHASE_BLOCK: phase-block
 COMMAND_ARGUMENT_PHASE_LEVEL: phase-level
 COMMAND_ARGUMENT_PLAYER_NAME: player-name
@@ -14,6 +14,7 @@ COMMAND_DESCRIPTION_CHECK: 'Check progress of a player.'
 COMMAND_DESCRIPTION_RELOAD: 'Reload all settings of the plugin.'
 COMMAND_DESCRIPTION_SAVE: 'Save all data to disk.'
 COMMAND_DESCRIPTION_SET_ONEBLOCK: 'Set the one-block location for your island.'
+COMMAND_DESCRIPTION_UNLOCK_ONEBLOCK: 'Unlock an extra one-block for your island.'
 COMMAND_DESCRIPTION_SET_PHASE: 'Set the phase for a specific player.'
 COMMAND_DESCRIPTION_SET_PHASE_BLOCK: 'Set the phase-block for a specific player.'
 COMMAND_USAGE: '&cUsage: /{0}'
@@ -25,13 +26,16 @@ INVALID_NUMBER: '&c&lError | &7Invalid number {0}.'
 ISLAND_MISSING_BLOCK: '&c&lError | &7This island cannot have a one-block.'
 NO_MORE_PHASES: '&e&lIsland | &7You are at the last phase.'
 NO_PERMISSION: '&fUnknown command. Type \"/help\" for help.'
-ONEBLOCK_NOT_UNLOCKED: '&c&lError | &7One-block {0} is not unlocked.'
+ONEBLOCK_DUPLICATE_LOCATION: '&c&lError | &7Another one-block is already at {0}, {1}, {2}.'
+ONEBLOCK_UNLOCK_SUCCESS: '&e&lIsland | &7Unlocked one-block in {0}.'
+ONEBLOCK_UNLOCK_SUCCESS_TIMED: '&e&lIsland | &7Unlocked one-block in {0} for {1}.'
+INVALID_DURATION: '&c&lError | &7Invalid duration {0}. Use s/m/h/d.'
 PHASE_PROGRESS:
   action-bar:
     text: '&6Progress: {0}% &7({1}/{2})'
 RELOAD_FILES: '&e&lIsland | &7Successfully reloaded all files in {0}ms.'
 SAVE_DATA: '&e&lIsland | &7Successfully saved all data in {0}ms.'
-SET_ONEBLOCK_SUCCESS: '&e&lIsland | &7Set one-block {0} in {1} to {2}, {3}, {4}.'
+SET_ONEBLOCK_SUCCESS: '&e&lIsland | &7Set one-block in {0} to {1}, {2}, {3}.'
 SET_PHASE_BLOCK_FAILURE: '&c&lError | &7You cannot change the phase-block to {0}.'
 SET_PHASE_BLOCK_SUCCESS: '&e&lIsland | &7Successfully changed the phase block for {0} to {1}.'
 SET_PHASE_FAILURE: '&c&lError | &7You cannot change the phase-level to {0}.'
