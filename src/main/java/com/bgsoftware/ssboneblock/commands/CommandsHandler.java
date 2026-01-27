@@ -1,13 +1,7 @@
 package com.bgsoftware.ssboneblock.commands;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
-import com.bgsoftware.ssboneblock.commands.commands.CmdCheck;
-import com.bgsoftware.ssboneblock.commands.commands.CmdReload;
-import com.bgsoftware.ssboneblock.commands.commands.CmdSave;
-import com.bgsoftware.ssboneblock.commands.commands.CmdSetPhase;
-import com.bgsoftware.ssboneblock.commands.commands.CmdSetPhaseBlock;
-import com.bgsoftware.ssboneblock.commands.commands.CmdSetOneBlock;
-import com.bgsoftware.ssboneblock.commands.commands.CmdUnlockOneBlock;
+import com.bgsoftware.ssboneblock.commands.commands.*;
 import com.bgsoftware.ssboneblock.lang.LocaleUtils;
 import com.bgsoftware.ssboneblock.lang.Message;
 import org.bukkit.command.Command;

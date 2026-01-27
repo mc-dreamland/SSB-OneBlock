@@ -44,7 +44,7 @@ public final class CmdReload implements ICommand {
     public void perform(OneBlockModule module, CommandSender sender, String[] args) {
         long startTime = System.currentTimeMillis();
         module.getPhasesHandler().getDataStore().save();
-        module.onReload(module.getPlugin());
+        module.onReload();
         Message.RELOAD_FILES.send(sender,
                 (System.currentTimeMillis() - startTime) );
     }

@@ -61,7 +61,7 @@ public enum Message {
 
     private final Map<Locale, IMessageComponent> messages = new HashMap<>();
 
-    public String getMessage(java.util.Locale locale) {
+    public String getMessage(Locale locale) {
         return messages.getOrDefault(locale, EMPTY_COMPONENT).getMessage();
     }
 
@@ -75,12 +75,12 @@ public enum Message {
             send(sender, LocaleUtils.getLocale(sender), objects);
     }
 
-    public void send(@Nullable CommandSender sender, java.util.Locale locale, Object... args) {
+    public void send(@Nullable CommandSender sender, Locale locale, Object... args) {
         if (sender != null)
             messages.getOrDefault(locale, EMPTY_COMPONENT).sendMessage(sender, args);
     }
 
-    private void setMessage(java.util.Locale locale, IMessageComponent messageComponent) {
+    private void setMessage(Locale locale, IMessageComponent messageComponent) {
         messages.put(locale, messageComponent);
     }
 
@@ -90,18 +90,18 @@ public enum Message {
         OneBlockModule.log("Loading messages started...");
         long startTime = System.currentTimeMillis();
 
-        File langFolder = new File(module.getModuleFolder(), "lang");
+        File langFolder = new File(module.getDataFolder(), "lang");
 
         if (!langFolder.exists()) {
-            module.saveResource("lang/de-DE.yml");
-            module.saveResource("lang/en-US.yml");
-            module.saveResource("lang/es-ES.yml");
-            module.saveResource("lang/fr-FR.yml");
-            module.saveResource("lang/it-IT.yml");
-            module.saveResource("lang/iw-IL.yml");
-            module.saveResource("lang/pl-PL.yml");
-            module.saveResource("lang/vi-VN.yml");
-            module.saveResource("lang/zh-CN.yml");
+            module.saveResource("lang/de-DE.yml", false);
+            module.saveResource("lang/en-US.yml", false);
+            module.saveResource("lang/es-ES.yml", false);
+            module.saveResource("lang/fr-FR.yml", false);
+            module.saveResource("lang/it-IT.yml", false);
+            module.saveResource("lang/iw-IL.yml", false);
+            module.saveResource("lang/pl-PL.yml", false);
+            module.saveResource("lang/vi-VN.yml", false);
+            module.saveResource("lang/zh-CN.yml", false);
         }
 
         int messagesAmount = 0;
@@ -109,7 +109,7 @@ public enum Message {
 
         for (File langFile : Objects.requireNonNull(langFolder.listFiles())) {
             String fileName = langFile.getName().split("\\.")[0];
-            java.util.Locale fileLocale;
+            Locale fileLocale;
 
             try {
                 fileLocale = LocaleUtils.getLocale(fileName);

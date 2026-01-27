@@ -3,7 +3,6 @@ package com.bgsoftware.ssboneblock.actions;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 

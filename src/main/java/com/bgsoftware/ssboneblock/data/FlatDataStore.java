@@ -2,8 +2,8 @@ package com.bgsoftware.ssboneblock.data;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
-import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.ssboneblock.utils.JsonUtils;
+import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.google.gson.JsonArray;
@@ -57,7 +57,7 @@ public final class FlatDataStore implements DataStore {
 
     @Override
     public void load() {
-        File file = new File(module.getDataStoreFolder(), "database.json");
+        File file = new File(module.getDataFolder(), "database.json");
 
         convertOldDatabase(file);
 
@@ -113,7 +113,7 @@ public final class FlatDataStore implements DataStore {
             }
         }
 
-        File file = new File(module.getDataStoreFolder(), "database.json");
+        File file = new File(module.getDataFolder(), "database.json");
 
         if (file.isDirectory())
             file.delete();
@@ -135,7 +135,7 @@ public final class FlatDataStore implements DataStore {
     }
 
     private void convertOldDatabase(File newFile) {
-        File oldFile = new File(module.getModuleFolder(), "database.json");
+        File oldFile = new File(module.getDataFolder(), "database.json");
         if (oldFile.exists()) {
             newFile.getParentFile().mkdirs();
             oldFile.renameTo(newFile);

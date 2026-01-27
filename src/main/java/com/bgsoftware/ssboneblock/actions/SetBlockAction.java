@@ -30,7 +30,7 @@ public final class SetBlockAction extends Action {
         super(offsetPosition);
         this.type = type;
         this.data = data;
-        this.nbt = module.getNMSAdapter().isLegacy() ? removeBrackets(nbt) : nbt;
+        this.nbt = nbt;
         this.containerAction = container == null ? null : SetContainerAction.fromJson(container, phasesHandler, fileName);
     }
 

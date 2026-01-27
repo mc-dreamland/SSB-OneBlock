@@ -1,8 +1,5 @@
 package com.bgsoftware.ssboneblock;
 
-import com.bgsoftware.common.nmsloader.INMSLoader;
-import com.bgsoftware.common.nmsloader.NMSHandlersFactory;
-import com.bgsoftware.common.nmsloader.NMSLoadException;
 import com.bgsoftware.ssboneblock.commands.CommandsHandler;
 import com.bgsoftware.ssboneblock.data.DataType;
 import com.bgsoftware.ssboneblock.data.FlatDataStore;
@@ -13,24 +10,24 @@ import com.bgsoftware.ssboneblock.handler.SettingsHandler;
 import com.bgsoftware.ssboneblock.lang.Message;
 import com.bgsoftware.ssboneblock.listeners.BlocksListener;
 import com.bgsoftware.ssboneblock.listeners.IslandsListener;
-import com.bgsoftware.ssboneblock.nms.ModuleNMSConfiguration;
-import com.bgsoftware.ssboneblock.nms.NMSAdapter;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.ssboneblock.phases.PhaseData;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.task.SaveTimer;
+import com.bgsoftware.ssboneblock.utils.NMSAdapter;
+import com.bgsoftware.ssboneblock.utils.WorldUtils;
+import com.bgsoftware.superiorskyblock.SuperiorSkyblockPlugin;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblock;
-import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
-import com.bgsoftware.superiorskyblock.api.commands.SuperiorCommand;
-import com.bgsoftware.superiorskyblock.api.modules.PluginModule;
 import com.bgsoftware.superiorskyblock.api.service.placeholders.PlaceholdersService;
 import org.bukkit.Bukkit;
-import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.event.Listener;
+import org.bukkit.Location;
+import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class OneBlockModule extends PluginModule {
+import java.util.List;
+
+public final class OneBlockModule extends JavaPlugin {
 
     private static final int SUPPORTED_API_VERSION = 12;
 
@@ -40,38 +37,25 @@ public final class OneBlockModule extends PluginModule {
 
     private PhasesHandler phasesHandler;
     private SettingsHandler settingsHandler;
-    private NMSAdapter nmsAdapter;
     private final OneBlockUnlocksHandler oneBlockUnlocksHandler = new OneBlockUnlocksHandler(this);
+    private NMSAdapter nmsAdapter;
 
     public OneBlockModule() {
-        super("OneBlock", "Ome_R");
         instance = this;
     }
 
     @Override
-    public void onEnable(SuperiorSkyblock plugin) {
-        this.plugin = plugin;
+    public void onEnable() {
+        this.plugin = SuperiorSkyblockPlugin.getPlugin();
+        nmsAdapter = new NMSAdapter();
 
-        if (SuperiorSkyblockAPI.getAPIVersion() < SUPPORTED_API_VERSION)
-            throw new RuntimeException("SuperiorSkyblock2 API version is not supported: " +
-                    SuperiorSkyblockAPI.getAPIVersion() + " < " + SUPPORTED_API_VERSION);
 
-        if (!loadNMSAdapter()) {
-            throw new RuntimeException("Couldn't find a valid nms support for your version.");
-        }
+        onReload();
 
-        onReload(plugin);
-
-        String label;
-        if (nmsAdapter.getCommandMap().getCommand("oneblock") == null) {
-            label = "oneblock";
-        } else {
-            label = "ssboneblock";
-            getLogger().warning("The command '/oneblock' is already registered, defaulting to '/ssboneblock' instead.");
-        }
+        String label = "oneblock";
 
         CommandsHandler commandsHandler = new CommandsHandler(this, label);
-        SimpleCommandMap commandMap = nmsAdapter.getCommandMap();
+        CommandMap commandMap = getServer().getCommandMap();
         commandMap.register("ssboneblock", commandsHandler);
 
         try {
@@ -83,10 +67,13 @@ public final class OneBlockModule extends PluginModule {
         SaveTimer.startTimer(this);
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> phasesHandler.getDataStore().load(), 1L);
+
+        onReload();
+        loadData();
+        initListeners();
     }
 
-    @Override
-    public void onReload(SuperiorSkyblock plugin) {
+    public void onReload() {
         if (this.phasesHandler != null)
             this.phasesHandler.getDataStore().save();
 
@@ -98,51 +85,25 @@ public final class OneBlockModule extends PluginModule {
     }
 
     @Override
-    public void onDisable(SuperiorSkyblock plugin) {
+    public void onDisable() {
         NextPhaseTimer.cancelTimers();
         SaveTimer.stopTimer();
         if (this.phasesHandler != null)
             this.phasesHandler.getDataStore().save();
     }
 
-    @Override
-    public void loadData(SuperiorSkyblock plugin) {
+    public void loadData() {
         this.phasesHandler.getDataStore().load();
     }
 
-    @Override
-    public Listener[] getModuleListeners(SuperiorSkyblock superiorSkyblock) {
-        return new Listener[]{new IslandsListener(this), new BlocksListener(this)};
-    }
-
-    @Override
-    public SuperiorCommand[] getSuperiorCommands(SuperiorSkyblock superiorSkyblock) {
-        return null;
-    }
-
-    @Override
-    public SuperiorCommand[] getSuperiorAdminCommands(SuperiorSkyblock superiorSkyblock) {
-        return null;
-    }
-
-    private boolean loadNMSAdapter() {
-        try {
-            INMSLoader nmsLoader = NMSHandlersFactory.createNMSLoader((JavaPlugin) this.plugin,
-                    new ModuleNMSConfiguration(this), getClassLoader());
-
-            this.nmsAdapter = nmsLoader.loadNMSHandler(NMSAdapter.class);
-
-            return true;
-        } catch (NMSLoadException error) {
-            log("&cThe plugin doesn't support your minecraft version.");
-            log("&cPlease try a different version.");
-
-            error.printStackTrace();
-        }
-
-        return false;
+    public void initListeners() {
+        IslandsListener islandsListener = new IslandsListener(this);
+        BlocksListener blocksListener = new BlocksListener(this);
+        getServer().getPluginManager().registerEvents(islandsListener, this);
+        getServer().getPluginManager().registerEvents(blocksListener, this);
 
     }
+
 
     public PhasesHandler getPhasesHandler() {
         return phasesHandler;
@@ -262,11 +223,18 @@ public final class OneBlockModule extends PluginModule {
                 return "0";
             }
             int end = maxPhaseData.getEnd();
-            double loopedProgress = end; // 第 0 次循环直接是 end
             double currentMultiplier = 1.0; // 初始倍率为1
-            for (int i = 1; i < islandPhaseData.getPhaseLoopTimes(); i++) {
-                currentMultiplier *= phasesLoopMultiple;
-                loopedProgress += currentMultiplier * end;
+            int phaseLoopTimes = islandPhaseData.getPhaseLoopTimes();
+            double loopedProgress = 0;
+            for (int i = 0; i < phaseLoopTimes; i++) {
+                if (i == 0) {
+                    // 第一次 loop，不乘倍率
+                    loopedProgress += end;
+                } else {
+                    // 后续 loop：先更新倍率，再累加
+                    currentMultiplier *= phasesLoopMultiple;
+                    loopedProgress += end * currentMultiplier;
+                }
             }
 
             double totalProgress = totalBefore * currentMultiplier + loopedProgress + phaseBlock;
@@ -331,6 +299,70 @@ public final class OneBlockModule extends PluginModule {
             return String.valueOf(oneBlockUnlocksHandler.getUnlockedCount(island));
         });
 
+        placeholdersService.registerPlaceholder("oneblock_locations_x", (island, superiorPlayer) -> {
+            if (island == null || superiorPlayer == null)
+                return null;
+
+            if (superiorPlayer.getWorld() == null)
+                return "";
+
+            String dimensionKey = superiorPlayer.getWorld().getEnvironment().name();
+            List<Location> locations = WorldUtils.getOneBlockLocations(island, dimensionKey);
+            if (locations.isEmpty())
+                return "";
+
+            StringBuilder builder = new StringBuilder();
+            for (Location location : locations) {
+                if (!builder.isEmpty())
+                    builder.append(',');
+                builder.append(location.getBlockX());
+            }
+            return builder.toString();
+        });
+
+        placeholdersService.registerPlaceholder("oneblock_locations_y", (island, superiorPlayer) -> {
+            if (island == null || superiorPlayer == null)
+                return null;
+
+            if (superiorPlayer.getWorld() == null)
+                return "";
+
+            String dimensionKey = superiorPlayer.getWorld().getEnvironment().name();
+            List<Location> locations = WorldUtils.getOneBlockLocations(island, dimensionKey);
+            if (locations.isEmpty())
+                return "";
+
+            StringBuilder builder = new StringBuilder();
+            for (Location location : locations) {
+                if (!builder.isEmpty())
+                    builder.append(',');
+                builder.append(location.getBlockY());
+            }
+            return builder.toString();
+        });
+
+        placeholdersService.registerPlaceholder("oneblock_locations_z", (island, superiorPlayer) -> {
+            if (island == null || superiorPlayer == null)
+                return null;
+
+            if (superiorPlayer.getWorld() == null)
+                return "";
+
+            String dimensionKey = superiorPlayer.getWorld().getEnvironment().name();
+            List<Location> locations = WorldUtils.getOneBlockLocations(island, dimensionKey);
+            if (locations.isEmpty())
+                return "";
+
+            StringBuilder builder = new StringBuilder();
+            for (Location location : locations) {
+                if (!builder.isEmpty())
+                    builder.append(',');
+                builder.append(location.getBlockZ());
+            }
+            return builder.toString();
+        });
+
     }
+
 
 }

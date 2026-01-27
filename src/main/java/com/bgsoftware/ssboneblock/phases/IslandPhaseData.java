@@ -1,7 +1,10 @@
 package com.bgsoftware.ssboneblock.phases;
 
+import lombok.Data;
+
 import java.util.*;
 
+@Data
 public final class IslandPhaseData {
 
     private final int phaseLevel;
@@ -22,26 +25,6 @@ public final class IslandPhaseData {
         this.phaseLoopTimes = phaseLoopTimes;
         this.unlocks = copySlotsMap(unlocks);
         this.apiUnlocks = copySlotsMap(apiUnlocks);
-    }
-
-    public int getPhaseLevel() {
-        return phaseLevel;
-    }
-
-    public int getPhaseLoopTimes() {
-        return phaseLoopTimes;
-    }
-
-    public int getPhaseBlock() {
-        return phaseBlock;
-    }
-
-    public Map<String, List<OneBlockSlotData>> getUnlocks() {
-        return unlocks;
-    }
-
-    public Map<String, List<OneBlockSlotData>> getApiUnlocks() {
-        return apiUnlocks;
     }
 
     public IslandPhaseData withUnlockLocation(String dimensionKey, int index, OneBlockLocation location, boolean api) {
@@ -136,6 +119,7 @@ public final class IslandPhaseData {
         return Collections.unmodifiableMap(copy);
     }
 
+    @Data
     public static final class OneBlockLocation {
 
         private final double x;
@@ -148,20 +132,9 @@ public final class IslandPhaseData {
             this.z = z;
         }
 
-        public double getX() {
-            return x;
-        }
-
-        public double getY() {
-            return y;
-        }
-
-        public double getZ() {
-            return z;
-        }
-
     }
 
+    @Data
     public static final class OneBlockSlotData {
 
         private final OneBlockLocation location;
@@ -170,14 +143,6 @@ public final class IslandPhaseData {
         public OneBlockSlotData(OneBlockLocation location, Long expiresAt) {
             this.location = location;
             this.expiresAt = expiresAt;
-        }
-
-        public OneBlockLocation getLocation() {
-            return location;
-        }
-
-        public Long getExpiresAt() {
-            return expiresAt;
         }
 
     }

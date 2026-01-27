@@ -13,13 +13,10 @@ import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import com.bgsoftware.superiorskyblock.core.database.bridge.IslandsDatabaseBridge;
-import com.bgsoftware.superiorskyblock.core.database.bridge.PlayersDatabaseBridge;
-import com.bgsoftware.superiorskyblock.core.logging.Log;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -121,7 +118,7 @@ public final class PhasesHandler {
 
         IslandPhaseData newPhaseData = this.dataStore.getPhaseData(island, false);
 
-        if (newPhaseData == islandPhaseData)
+        if (newPhaseData.equals(islandPhaseData))
             this.dataStore.setPhaseData(island, islandPhaseData.nextBlock());
 
         Message.PHASE_PROGRESS.send(superiorPlayer,
@@ -190,57 +187,57 @@ public final class PhasesHandler {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private PhaseData[] loadData() {
-        File phasesFolder = new File(module.getModuleFolder(), "phases");
-        File possibilitiesFolder = new File(module.getModuleFolder(), "possibilities");
+        File phasesFolder = new File(module.getDataFolder(), "phases");
+        File possibilitiesFolder = new File(module.getDataFolder(), "possibilities");
 
         if (!phasesFolder.exists()) {
             phasesFolder.mkdirs();
-            module.saveResource("phases/plains-phase.json");
-            module.saveResource("phases/underground-phase.json");
-            module.saveResource("phases/snow-phase.json");
-            module.saveResource("phases/ocean-phase.json");
-            module.saveResource("phases/jungle-phase.json");
-            module.saveResource("phases/red-desert-phase.json");
-            module.saveResource("phases/nether-phase.json");
-            module.saveResource("phases/idyll-phase.json");
-            module.saveResource("phases/desolate-phase.json");
-            module.saveResource("phases/end-phase.json");
+            module.saveResource("phases/plains-phase.json", false);
+            module.saveResource("phases/underground-phase.json", false);
+            module.saveResource("phases/snow-phase.json", false);
+            module.saveResource("phases/ocean-phase.json", false);
+            module.saveResource("phases/jungle-phase.json", false);
+            module.saveResource("phases/red-desert-phase.json", false);
+            module.saveResource("phases/nether-phase.json", false);
+            module.saveResource("phases/idyll-phase.json", false);
+            module.saveResource("phases/desolate-phase.json", false);
+            module.saveResource("phases/end-phase.json", false);
         }
 
         if (!possibilitiesFolder.exists()) {
             possibilitiesFolder.mkdirs();
-            module.saveResource("possibilities/plains-blocks.json");
-            module.saveResource("possibilities/plains-chests.json");
-            module.saveResource("possibilities/plains-mobs.json");
-            module.saveResource("possibilities/underground-blocks.json");
-            module.saveResource("possibilities/underground-chests.json");
-            module.saveResource("possibilities/underground-mobs.json");
-            module.saveResource("possibilities/snow-blocks.json");
-            module.saveResource("possibilities/snow-chests.json");
-            module.saveResource("possibilities/snow-mobs.json");
-            module.saveResource("possibilities/ocean-blocks.json");
-            module.saveResource("possibilities/ocean-chests.json");
-            module.saveResource("possibilities/ocean-mobs.json");
-            module.saveResource("possibilities/jungle-blocks.json");
-            module.saveResource("possibilities/jungle-chests.json");
-            module.saveResource("possibilities/jungle-mobs.json");
-            module.saveResource("possibilities/red-desert-blocks.json");
-            module.saveResource("possibilities/red-desert-chests.json");
-            module.saveResource("possibilities/red-desert-mobs.json");
-            module.saveResource("possibilities/nether-blocks.json");
-            module.saveResource("possibilities/nether-chests.json");
-            module.saveResource("possibilities/nether-mobs.json");
-            module.saveResource("possibilities/idyll-blocks.json");
-            module.saveResource("possibilities/idyll-chests.json");
-            module.saveResource("possibilities/idyll-mobs.json");
-            module.saveResource("possibilities/desolate-blocks.json");
-            module.saveResource("possibilities/desolate-chests.json");
-            module.saveResource("possibilities/desolate-mobs.json");
-            module.saveResource("possibilities/end-blocks.json");
-            module.saveResource("possibilities/end-chests.json");
-            module.saveResource("possibilities/end-mobs.json");
-            module.saveResource("possibilities/superchest.json");
-            module.saveResource("possibilities/rarechest.json");
+            module.saveResource("possibilities/plains-blocks.json", false);
+            module.saveResource("possibilities/plains-chests.json", false);
+            module.saveResource("possibilities/plains-mobs.json", false);
+            module.saveResource("possibilities/underground-blocks.json", false);
+            module.saveResource("possibilities/underground-chests.json", false);
+            module.saveResource("possibilities/underground-mobs.json", false);
+            module.saveResource("possibilities/snow-blocks.json", false);
+            module.saveResource("possibilities/snow-chests.json", false);
+            module.saveResource("possibilities/snow-mobs.json", false);
+            module.saveResource("possibilities/ocean-blocks.json", false);
+            module.saveResource("possibilities/ocean-chests.json", false);
+            module.saveResource("possibilities/ocean-mobs.json", false);
+            module.saveResource("possibilities/jungle-blocks.json", false);
+            module.saveResource("possibilities/jungle-chests.json", false);
+            module.saveResource("possibilities/jungle-mobs.json", false);
+            module.saveResource("possibilities/red-desert-blocks.json", false);
+            module.saveResource("possibilities/red-desert-chests.json", false);
+            module.saveResource("possibilities/red-desert-mobs.json", false);
+            module.saveResource("possibilities/nether-blocks.json", false);
+            module.saveResource("possibilities/nether-chests.json", false);
+            module.saveResource("possibilities/nether-mobs.json", false);
+            module.saveResource("possibilities/idyll-blocks.json", false);
+            module.saveResource("possibilities/idyll-chests.json", false);
+            module.saveResource("possibilities/idyll-mobs.json", false);
+            module.saveResource("possibilities/desolate-blocks.json", false);
+            module.saveResource("possibilities/desolate-chests.json", false);
+            module.saveResource("possibilities/desolate-mobs.json", false);
+            module.saveResource("possibilities/end-blocks.json", false);
+            module.saveResource("possibilities/end-chests.json", false);
+            module.saveResource("possibilities/end-mobs.json", false);
+            module.saveResource("possibilities/superchest.json", false);
+            module.saveResource("possibilities/rarechest.json", false);
         }
 
         File[] possibilityFiles = possibilitiesFolder.listFiles();
@@ -260,10 +257,10 @@ public final class PhasesHandler {
         List<PhaseData> phaseDataList = new ArrayList<>();
 
         for (Pair<String, Integer> phaseFileName : module.getSettings().phases) {
-            File phaseFile = new File(module.getModuleFolder() + "/phases", phaseFileName.first);
+            File phaseFile = new File(module.getDataFolder() + "/phases", phaseFileName.first);
 
             if (!phaseFile.exists()) {
-                OneBlockModule.log("Failed find the phase file " + phaseFileName.first + "...");
+                OneBlockModule.log("Failed find the phase file " + phaseFileName.first + "..." + phaseFile.getPath());
                 continue;
             }
 

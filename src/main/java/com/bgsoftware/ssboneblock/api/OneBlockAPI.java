@@ -76,7 +76,7 @@ public final class OneBlockAPI {
             return false;
 
         int current = module.getOneBlockUnlocksHandler().getApiCounts(island)
-                .getOrDefault(dimensionKey.toUpperCase(java.util.Locale.ENGLISH), 0);
+                .getOrDefault(dimensionKey.toUpperCase(Locale.ENGLISH), 0);
         return module.getOneBlockUnlocksHandler().setApiUnlockCount(island, dimensionKey, current + 1);
     }
 

@@ -5,6 +5,7 @@ import com.bgsoftware.ssboneblock.utils.JsonUtils;
 import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
+import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataContainer;
 import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataType;
 import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataTypeContext;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
@@ -22,7 +23,8 @@ public final class SqlDataStore implements DataStore {
 
     @Override
     public IslandPhaseData getPhaseData(Island island, boolean createNew) {
-        IslandPhaseData islandPhaseData = island.getPersistentDataContainer().get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
+        PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
+        IslandPhaseData islandPhaseData = persistentDataContainer.get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
 
         if (islandPhaseData != null || !createNew) {
             if (createNew) {
@@ -42,7 +44,8 @@ public final class SqlDataStore implements DataStore {
 
     @Override
     public void setPhaseData(Island island, IslandPhaseData phaseData) {
-        island.getPersistentDataContainer().put(PHASE_DATA_KEY, PHASE_DATA_TYPE, phaseData);
+        PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
+        persistentDataContainer.put(PHASE_DATA_KEY, PHASE_DATA_TYPE, phaseData);
     }
 
     @Override

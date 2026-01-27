@@ -32,10 +32,10 @@ public final class SettingsHandler {
     public final boolean gravity;
 
     public SettingsHandler(OneBlockModule module) {
-        File file = new File(module.getModuleFolder(), "config.yml");
+        File file = new File(module.getDataFolder(), "config.yml");
 
         if (!file.exists())
-            module.saveResource("config.yml");
+            module.saveResource("config.yml", false);
 
         CommentedConfiguration cfg = CommentedConfiguration.loadConfiguration(file);
 

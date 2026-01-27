@@ -80,7 +80,6 @@ public final class OneBlockMenu {
             module.getPhasesHandler().getDataStore().setPhaseData(island,
                     islandPhaseData.withUnlockLocation(dimensionKey, slot.index, updated, slot.api));
 
-            block.setType(Material.BEDROCK);
 
             Message.SET_ONEBLOCK_SUCCESS.send(player, dimensionKey, target.getX(), target.getY(), target.getZ());
             open(module, player, island);
@@ -197,9 +196,10 @@ public final class OneBlockMenu {
             return Material.NETHERRACK;
         }
         if ("THE_END".equalsIgnoreCase(dimensionKey) || "END".equalsIgnoreCase(dimensionKey)) {
-            return Material.ENDER_STONE;
+            Material endStone = Material.getMaterial("END_STONE");
+            return Objects.requireNonNullElse(endStone, Material.STONE);
         }
-        return Material.GRASS;
+        return Material.GRASS_BLOCK;
     }
 
     private static String color(String text) {

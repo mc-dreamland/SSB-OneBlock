@@ -1,0 +1,7 @@
+name: SuperiorSkyblockOneBlock
+version: '1.0-SNAPSHOT'
+main: com.bgsoftware.ssboneblock.OneBlockModule
+api-version: '1.20'
+authors: [ Miku_Snow ]
+depend:
+  - SuperiorSkyblock2
