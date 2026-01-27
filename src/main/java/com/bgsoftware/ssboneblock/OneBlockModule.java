@@ -79,7 +79,7 @@ public final class OneBlockModule extends JavaPlugin {
 
         this.settingsHandler = new SettingsHandler(this);
         this.phasesHandler = new PhasesHandler(this, this.phasesHandler != null ? this.phasesHandler.getDataStore() :
-                (this.settingsHandler.dataType == DataType.FLAT ? new FlatDataStore(this) : new SqlDataStore()));
+                (this.settingsHandler.dataType == DataType.FLAT ? new FlatDataStore(this) : new SqlDataStore(this)));
 
         Message.reload();
     }

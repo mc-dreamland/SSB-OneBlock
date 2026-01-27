@@ -1,5 +1,6 @@
 package com.bgsoftware.ssboneblock.data;
 
+import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.ssboneblock.utils.JsonUtils;
 import com.bgsoftware.ssboneblock.utils.WorldUtils;
@@ -11,9 +12,14 @@ import com.bgsoftware.superiorskyblock.api.persistence.PersistentDataTypeContext
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
+import org.bukkit.Bukkit;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class SqlDataStore implements DataStore {
 
@@ -21,31 +27,45 @@ public final class SqlDataStore implements DataStore {
             IslandPhaseData.class, PhasePersistentDataTypeContext.getInstance());
     private static final String PHASE_DATA_KEY = "oneblock:phase_data";
 
+    private final Map<UUID, IslandPhaseData> phaseCache = new ConcurrentHashMap<>();
+    private final Set<UUID> dirtyIslands = ConcurrentHashMap.newKeySet();
+
+    private final OneBlockModule module;
+
+    public SqlDataStore(OneBlockModule module) {
+        this.module = module;
+    }
+
     @Override
     public IslandPhaseData getPhaseData(Island island, boolean createNew) {
+        UUID islandId = island.getUniqueId();
+        IslandPhaseData cached = phaseCache.get(islandId);
+        if (cached != null) {
+            return ensureCachedDefault(island, cached, createNew);
+        }
+
         PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
         IslandPhaseData islandPhaseData = persistentDataContainer.get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
 
-        if (islandPhaseData != null || !createNew) {
-            if (createNew) {
-                IslandPhaseData ensured = ensureDefaultLocation(island, islandPhaseData);
-                if (ensured != islandPhaseData) {
-                    setPhaseData(island, ensured);
-                    return ensured;
-                }
-            }
-            return islandPhaseData;
+        if (islandPhaseData != null) {
+            phaseCache.put(islandId, islandPhaseData);
+            return ensureCachedDefault(island, islandPhaseData, createNew);
         }
 
+        if (!createNew)
+            return null;
+
         islandPhaseData = buildDefaultPhaseData(island);
-        setPhaseData(island, islandPhaseData);
+        phaseCache.put(islandId, islandPhaseData);
+        dirtyIslands.add(islandId);
         return islandPhaseData;
     }
 
     @Override
     public void setPhaseData(Island island, IslandPhaseData phaseData) {
-        PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
-        persistentDataContainer.put(PHASE_DATA_KEY, PHASE_DATA_TYPE, phaseData);
+        UUID islandId = island.getUniqueId();
+        phaseCache.put(islandId, phaseData);
+        dirtyIslands.add(islandId);
     }
 
     @Override
@@ -59,23 +79,48 @@ public final class SqlDataStore implements DataStore {
             island = SuperiorSkyblockAPI.getIslandByUUID(islandUUID);
         }
 
-        if (island != null)
+        if (island != null) {
             setPhaseData(island, phaseData);
+        }
     }
 
     @Override
     public void removeIsland(Island island) {
-        // Do nothing - data is handled by SSB.
+        UUID islandId = island.getUniqueId();
+        phaseCache.remove(islandId);
+        dirtyIslands.remove(islandId);
     }
 
     @Override
     public void load() {
-        // Do nothing - data is handled by SSB.
+        phaseCache.clear();
+        dirtyIslands.clear();
     }
 
     @Override
     public void save() {
-        // Do nothing - data is handled by SSB.
+        if (dirtyIslands.isEmpty())
+            return;
+        Runnable flushTask = this::flushDirtyIslands;
+        if (Bukkit.isPrimaryThread()) {
+            flushTask.run();
+        } else {
+            Bukkit.getScheduler().runTask(module, flushTask);
+        }
+    }
+
+    private void flushDirtyIslands() {
+        for (UUID islandId : new ArrayList<>(dirtyIslands)) {
+            Island island = SuperiorSkyblockAPI.getIslandByUUID(islandId);
+            if (island == null)
+                continue;
+            IslandPhaseData phaseData = phaseCache.get(islandId);
+            if (phaseData == null)
+                continue;
+            PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
+            persistentDataContainer.put(PHASE_DATA_KEY, PHASE_DATA_TYPE, phaseData);
+            dirtyIslands.remove(islandId);
+        }
     }
 
     private static final class PhasePersistentDataTypeContext implements PersistentDataTypeContext<IslandPhaseData> {
@@ -124,6 +169,8 @@ public final class SqlDataStore implements DataStore {
     }
 
     private IslandPhaseData ensureDefaultLocation(Island island, IslandPhaseData phaseData) {
+        if (phaseData == null)
+            return null;
         String defaultKey = WorldUtils.getDefaultDimensionKey();
         if (defaultKey == null || defaultKey.isEmpty())
             return phaseData;
@@ -138,6 +185,18 @@ public final class SqlDataStore implements DataStore {
             return phaseData;
 
         return phaseData.withUnlockLocation(defaultKey, 0, defaultLocation, false);
+    }
+
+    private IslandPhaseData ensureCachedDefault(Island island, IslandPhaseData phaseData, boolean createNew) {
+        if (!createNew)
+            return phaseData;
+        IslandPhaseData ensured = ensureDefaultLocation(island, phaseData);
+        if (ensured != phaseData) {
+            phaseCache.put(island.getUniqueId(), ensured);
+            dirtyIslands.add(island.getUniqueId());
+            return ensured;
+        }
+        return phaseData;
     }
 
 }
