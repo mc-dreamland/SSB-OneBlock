@@ -6,8 +6,15 @@ import com.bgsoftware.ssboneblock.lang.Message;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 
 public final class CmdUnlockOneBlock implements ICommand {
 
@@ -17,8 +24,8 @@ public final class CmdUnlockOneBlock implements ICommand {
     }
 
     @Override
-    public String getUsage(java.util.Locale locale) {
-        return "unlockoneblock [" + Message.COMMAND_ARGUMENT_DURATION.getMessage(locale) + "]";
+    public String getUsage(Locale locale) {
+        return "unlockoneblock <playerName> [dimension] [duration]";
     }
 
     @Override
@@ -27,7 +34,7 @@ public final class CmdUnlockOneBlock implements ICommand {
     }
 
     @Override
-    public String getDescription(java.util.Locale locale) {
+    public String getDescription(Locale locale) {
         return Message.COMMAND_DESCRIPTION_UNLOCK_ONEBLOCK.getMessage(locale);
     }
 
@@ -38,22 +45,33 @@ public final class CmdUnlockOneBlock implements ICommand {
 
     @Override
     public int getMaxArgs() {
-        return 2;
+        return 4;
     }
 
     @Override
     public void perform(OneBlockModule module, CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
-            Message.NO_PERMISSION.send(sender);
+
+        // 权限判断：控制台始终允许，玩家需 OP 或权限
+        if (sender instanceof Player player) {
+            if (!player.isOp() && !player.hasPermission(getPermission())) {
+                Message.NO_PERMISSION.send(sender);
+                return;
+            }
+        }
+
+        // 玩家名
+        String targetName = args[1];
+        Player targetPlayer = Bukkit.getPlayerExact(targetName);
+        if (targetPlayer == null) {
+            Message.INVALID_PLAYER.send(sender, targetName);
             return;
         }
 
-        Player player = (Player) sender;
-        SuperiorPlayer superiorPlayer = SuperiorSkyblockAPI.getPlayer(player);
+        SuperiorPlayer superiorPlayer = SuperiorSkyblockAPI.getPlayer(targetPlayer);
         Island island = superiorPlayer == null ? null : superiorPlayer.getIsland();
 
         if (island == null) {
-            Message.INVALID_ISLAND.send(sender, player.getName());
+            Message.INVALID_ISLAND.send(sender, targetName);
             return;
         }
 
@@ -62,34 +80,41 @@ public final class CmdUnlockOneBlock implements ICommand {
             return;
         }
 
-        if (island.getOwner() == null ||
-                !island.getOwner().getUniqueId().equals(superiorPlayer.getUniqueId())) {
-            Message.NO_PERMISSION.send(sender);
+        // 维度：默认主世界
+        String dimensionKey = World.Environment.NORMAL.name();
+        if (args.length >= 3 && !args[2].isEmpty()) {
+            dimensionKey = args[2].toUpperCase();
+        }
+
+        if (!dimensionKey.equals("NORMAL") && !dimensionKey.equals("NETHER") && !dimensionKey.equals("THE_END")) {
+            sender.sendMessage("§c维度不存在，仅支持: NORMAL, NETHER, THE_END");
             return;
         }
 
-        String dimensionKey = player.getWorld().getEnvironment().name();
+        // 时间：默认 0（永久）
         long expiresAt = 0L;
-        if (args.length > 1) {
-            Long duration = parseDuration(args[1]);
+        if (args.length >= 4) {
+            Long duration = parseDuration(args[3]);
             if (duration == null) {
-                Message.INVALID_DURATION.send(sender, args[1]);
+                Message.INVALID_DURATION.send(sender, args[3]);
                 return;
             }
             expiresAt = System.currentTimeMillis() + duration;
         }
 
-        module.getOneBlockUnlocksHandler().unlockOneBlock(island, dimensionKey, expiresAt);
+        module.getOneBlockUnlocksHandler()
+                .unlockOneBlock(island, dimensionKey, expiresAt);
+
         if (expiresAt > 0) {
-            Message.ONEBLOCK_UNLOCK_SUCCESS_TIMED.send(sender, dimensionKey, args[1]);
+            Message.ONEBLOCK_UNLOCK_SUCCESS_TIMED.send(sender, dimensionKey, args.length >= 4 ? args[3] : "0");
         } else {
             Message.ONEBLOCK_UNLOCK_SUCCESS.send(sender, dimensionKey);
         }
     }
 
     @Override
-    public java.util.List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
-        return java.util.Collections.emptyList();
+    public List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
+        return Collections.emptyList();
     }
 
     private Long parseDuration(String raw) {
@@ -132,5 +157,4 @@ public final class CmdUnlockOneBlock implements ICommand {
             return null;
         }
     }
-
 }
