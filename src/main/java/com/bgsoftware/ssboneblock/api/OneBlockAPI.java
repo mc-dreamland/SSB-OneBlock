@@ -62,6 +62,15 @@ public final class OneBlockAPI {
         return module.getOneBlockUnlocksHandler().getUnlockedCount(island);
     }
 
+    public static int getUnlockedApiOneBlocksCount(Island island, String dimensionKey) {
+        OneBlockModule module = OneBlockModule.getModule();
+        if (module == null)
+            return 0;
+
+        return module.getOneBlockUnlocksHandler().getApiCounts(island)
+                .getOrDefault(dimensionKey.toUpperCase(Locale.ENGLISH), 0);
+    }
+
     public static void setApiUnlockedCount(Island island, String dimensionKey, int count) {
         OneBlockModule module = OneBlockModule.getModule();
         if (module == null || island == null)
