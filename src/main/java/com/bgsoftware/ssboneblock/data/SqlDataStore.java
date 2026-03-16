@@ -44,8 +44,14 @@ public final class SqlDataStore implements DataStore {
             return ensureCachedDefault(island, cached, createNew);
         }
 
+
         PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
-        IslandPhaseData islandPhaseData = persistentDataContainer.get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
+        IslandPhaseData islandPhaseData;
+        try {
+            islandPhaseData = persistentDataContainer.get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
+        } catch (Throwable throwable) {
+            islandPhaseData = null;
+        }
 
         if (islandPhaseData != null) {
             phaseCache.put(islandId, islandPhaseData);
