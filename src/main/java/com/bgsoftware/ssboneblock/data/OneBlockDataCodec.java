@@ -172,6 +172,9 @@ final class OneBlockDataCodec {
                     slotObject.addProperty("expiration", expiration);
                 }
             }
+            if (slot != null && !slot.isActive()) {
+                slotObject.addProperty("active", false);
+            }
             array.add(slotObject);
         }
         return array;
@@ -212,10 +215,12 @@ final class OneBlockDataCodec {
                     expiresAt = parseExpiration(expirationElement.getAsString());
                 }
             }
+            boolean active = !slotObject.has("active") || !slotObject.get("active").isJsonPrimitive() ||
+                    slotObject.get("active").getAsBoolean();
             if (readExpiration && expiresAt != null && expiresAt > 0 && expiresAt <= now) {
                 continue;
             }
-            slots.add(new IslandPhaseData.OneBlockSlotData(location, expiresAt));
+            slots.add(new IslandPhaseData.OneBlockSlotData(location, expiresAt, active));
         }
         return slots;
     }

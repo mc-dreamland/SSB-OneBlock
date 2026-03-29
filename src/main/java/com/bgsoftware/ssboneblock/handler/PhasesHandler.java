@@ -134,12 +134,13 @@ public final class PhasesHandler {
 
     private void runNextActionTimer(Island island, @Nullable SuperiorPlayer superiorPlayer, Location oneBlockLocation,
                                     PhaseData phaseData, int nextPhaseLevel, int loopTimes) {
-        if (NextPhaseTimer.getTimer(island) == null) {
-            oneBlockLocation.getBlock().setType(Material.BEDROCK);
-            if (nextPhaseLevel >= 0) {
-                new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(), oneBlockLocation,
-                        () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes, oneBlockLocation));
-            }
+        NextPhaseTimer activeTimer = NextPhaseTimer.getTimer(island);
+
+        oneBlockLocation.getBlock().setType(Material.BEDROCK);
+
+        if (activeTimer == null && nextPhaseLevel >= 0) {
+            new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(), oneBlockLocation,
+                    () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes, oneBlockLocation));
         }
     }
 

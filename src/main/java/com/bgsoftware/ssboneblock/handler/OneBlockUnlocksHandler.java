@@ -104,18 +104,18 @@ public final class OneBlockUnlocksHandler {
 
     public Map<String, Integer> getUnlockedCounts(Island island) {
         if (island == null || !module.getPhasesHandler().canHaveOneBlock(island))
-            return java.util.Collections.emptyMap();
+            return Collections.emptyMap();
 
         Map<String, Integer> counts = new HashMap<>();
         IslandPhaseData phaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
-        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> unlocks = getUnlocks(island);
-        for (Map.Entry<String, java.util.List<IslandPhaseData.OneBlockSlotData>> entry : unlocks.entrySet()) {
+        Map<String, List<IslandPhaseData.OneBlockSlotData>> unlocks = getUnlocks(island);
+        for (Map.Entry<String, List<IslandPhaseData.OneBlockSlotData>> entry : unlocks.entrySet()) {
             counts.put(entry.getKey().toUpperCase(Locale.ENGLISH),
                     counts.getOrDefault(entry.getKey().toUpperCase(Locale.ENGLISH), 0) + entry.getValue().size());
         }
-        for (Map.Entry<String, java.util.List<IslandPhaseData.OneBlockSlotData>> entry : phaseData.getApiUnlocks().entrySet()) {
+        for (Map.Entry<String, List<IslandPhaseData.OneBlockSlotData>> entry : phaseData.getApiUnlocks().entrySet()) {
             counts.put(entry.getKey().toUpperCase(Locale.ENGLISH),
-                    counts.getOrDefault(entry.getKey().toUpperCase(Locale.ENGLISH), 0) + entry.getValue().size());
+                    counts.getOrDefault(entry.getKey().toUpperCase(Locale.ENGLISH), 0) + countActiveApiSlots(entry.getValue()));
         }
 
         return counts;
@@ -123,12 +123,12 @@ public final class OneBlockUnlocksHandler {
 
     public Map<String, Integer> getApiCounts(Island island) {
         if (island == null || !module.getPhasesHandler().canHaveOneBlock(island))
-            return java.util.Collections.emptyMap();
+            return Collections.emptyMap();
 
         IslandPhaseData phaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
         Map<String, Integer> counts = new HashMap<>();
         for (Map.Entry<String, java.util.List<IslandPhaseData.OneBlockSlotData>> entry : phaseData.getApiUnlocks().entrySet()) {
-            counts.put(entry.getKey().toUpperCase(Locale.ENGLISH), entry.getValue().size());
+            counts.put(entry.getKey().toUpperCase(Locale.ENGLISH), countActiveApiSlots(entry.getValue()));
         }
         return counts;
     }
@@ -141,13 +141,13 @@ public final class OneBlockUnlocksHandler {
         return total;
     }
 
-    public Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> getUnlocks(Island island) {
+    public Map<String, List<IslandPhaseData.OneBlockSlotData>> getUnlocks(Island island) {
         if (island == null || !module.getPhasesHandler().canHaveOneBlock(island))
             return java.util.Collections.emptyMap();
 
         IslandPhaseData phaseData = module.getPhasesHandler().getDataStore().getPhaseData(island, true);
-        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> unlocks = phaseData.getUnlocks();
-        Map<String, java.util.List<IslandPhaseData.OneBlockSlotData>> cleaned = new HashMap<>();
+        Map<String, List<IslandPhaseData.OneBlockSlotData>> unlocks = phaseData.getUnlocks();
+        Map<String, List<IslandPhaseData.OneBlockSlotData>> cleaned = new HashMap<>();
         boolean modified = false;
         long now = System.currentTimeMillis();
 
@@ -179,6 +179,15 @@ public final class OneBlockUnlocksHandler {
         }
 
         return cleaned;
+    }
+
+    private static int countActiveApiSlots(List<IslandPhaseData.OneBlockSlotData> slots) {
+        int count = 0;
+        for (IslandPhaseData.OneBlockSlotData slot : slots) {
+            if (slot == null || slot.isActive())
+                count++;
+        }
+        return count;
     }
 
 }

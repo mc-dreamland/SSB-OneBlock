@@ -45,7 +45,8 @@ public final class IslandPhaseData {
         }
         OneBlockSlotData existing = slots.get(index);
         Long expiresAt = existing == null ? null : existing.getExpiresAt();
-        slots.set(index, new OneBlockSlotData(location, expiresAt));
+        boolean active = existing == null || existing.isActive();
+        slots.set(index, new OneBlockSlotData(location, expiresAt, active));
 
         return new IslandPhaseData(phaseLevel, phaseBlock, phaseLoopTimes, updatedUnlocks, updatedApiUnlocks);
     }
@@ -82,12 +83,25 @@ public final class IslandPhaseData {
 
         String key = dimensionKey.toUpperCase(Locale.ENGLISH);
         List<OneBlockSlotData> slots = updatedApiUnlocks.computeIfAbsent(key, k -> new ArrayList<>());
-        while (slots.size() > count) {
-            slots.remove(slots.size() - 1);
+        int activeCount = countActiveApiSlots(slots);
+        while (activeCount > count) {
+            int index = findLastActiveApiSlot(slots);
+            if (index < 0)
+                break;
+            slots.set(index, slots.get(index).withActive(false));
+            activeCount--;
         }
-        while (slots.size() < count) {
-            slots.add(new OneBlockSlotData(null, null));
+        while (activeCount < count) {
+            int index = findFirstInactiveApiSlot(slots);
+            if (index >= 0) {
+                slots.set(index, slots.get(index).withActive(true));
+            } else {
+                slots.add(new OneBlockSlotData(null, null, true));
+            }
+            activeCount++;
         }
+
+        trimInactiveApiTail(slots);
 
         if (slots.isEmpty()) {
             updatedApiUnlocks.remove(key);
@@ -119,6 +133,42 @@ public final class IslandPhaseData {
         return Collections.unmodifiableMap(copy);
     }
 
+    private static int countActiveApiSlots(List<OneBlockSlotData> slots) {
+        int count = 0;
+        for (OneBlockSlotData slot : slots) {
+            if (slot != null && slot.isActive())
+                count++;
+        }
+        return count;
+    }
+
+    private static int findLastActiveApiSlot(List<OneBlockSlotData> slots) {
+        for (int i = slots.size() - 1; i >= 0; i--) {
+            OneBlockSlotData slot = slots.get(i);
+            if (slot != null && slot.isActive())
+                return i;
+        }
+        return -1;
+    }
+
+    private static int findFirstInactiveApiSlot(List<OneBlockSlotData> slots) {
+        for (int i = 0; i < slots.size(); i++) {
+            OneBlockSlotData slot = slots.get(i);
+            if (slot != null && !slot.isActive())
+                return i;
+        }
+        return -1;
+    }
+
+    private static void trimInactiveApiTail(List<OneBlockSlotData> slots) {
+        while (!slots.isEmpty()) {
+            OneBlockSlotData slot = slots.get(slots.size() - 1);
+            if (slot == null || slot.isActive() || slot.getLocation() != null)
+                return;
+            slots.remove(slots.size() - 1);
+        }
+    }
+
     @Data
     public static final class OneBlockLocation {
 
@@ -139,10 +189,22 @@ public final class IslandPhaseData {
 
         private final OneBlockLocation location;
         private final Long expiresAt;
+        private final boolean active;
 
         public OneBlockSlotData(OneBlockLocation location, Long expiresAt) {
+            this(location, expiresAt, true);
+        }
+
+        public OneBlockSlotData(OneBlockLocation location, Long expiresAt, boolean active) {
             this.location = location;
             this.expiresAt = expiresAt;
+            this.active = active;
+        }
+
+        public OneBlockSlotData withActive(boolean active) {
+            if (this.active == active)
+                return this;
+            return new OneBlockSlotData(location, expiresAt, active);
         }
 
     }

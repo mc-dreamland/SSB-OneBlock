@@ -12,6 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -23,7 +24,7 @@ public final class CmdSetOneBlock implements ICommand {
     }
 
     @Override
-    public String getUsage(java.util.Locale locale) {
+    public String getUsage(Locale locale) {
         return "setoneblock <playerName>";
     }
 
@@ -33,7 +34,7 @@ public final class CmdSetOneBlock implements ICommand {
     }
 
     @Override
-    public String getDescription(java.util.Locale locale) {
+    public String getDescription(Locale locale) {
         return Message.COMMAND_DESCRIPTION_SET_ONEBLOCK.getMessage(locale);
     }
 
@@ -79,7 +80,7 @@ public final class CmdSetOneBlock implements ICommand {
     }
 
     @Override
-    public java.util.List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
+    public List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
         if (args.length == 2) {
             List<String> players = new ArrayList<>();
             String input = args[1].toLowerCase(Locale.ENGLISH);
@@ -93,7 +94,7 @@ public final class CmdSetOneBlock implements ICommand {
             return players;
         }
 
-        return java.util.Collections.emptyList();
+        return Collections.emptyList();
     }
 
 }

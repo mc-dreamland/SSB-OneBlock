@@ -111,6 +111,8 @@ public final class OneBlockMenu {
             List<IslandPhaseData.OneBlockSlotData> apiList = apiUnlocks.getOrDefault(dimensionKey.toUpperCase(Locale.ENGLISH),
                     Collections.emptyList());
             for (int i = 0; i < apiList.size(); i++) {
+                if (!isVisibleApiSlot(apiList.get(i)))
+                    continue;
                 slots.add(new SlotEntry(dimensionKey, i, 0L, true));
             }
         }
@@ -244,6 +246,10 @@ public final class OneBlockMenu {
     private static String formatDouble(double value) {
         String text = Double.toString(value);
         return text.endsWith(".0") ? text : text;
+    }
+
+    private static boolean isVisibleApiSlot(IslandPhaseData.OneBlockSlotData slot) {
+        return slot == null || slot.isActive();
     }
 
     private static final class SlotEntry {

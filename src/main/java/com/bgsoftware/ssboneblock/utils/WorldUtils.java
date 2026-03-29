@@ -103,8 +103,8 @@ public class WorldUtils {
             return null;
         }
         int apiIndex = index - unlockSize;
-        if (apiUnlocks != null && apiIndex >= 0 && apiIndex < apiUnlocks.size()) {
-            IslandPhaseData.OneBlockSlotData slot = apiUnlocks.get(apiIndex);
+        if (apiUnlocks != null && apiIndex >= 0) {
+            IslandPhaseData.OneBlockSlotData slot = getVisibleApiSlot(apiUnlocks, apiIndex);
             if (slot != null && slot.getLocation() != null)
                 return toLocation(island, normalizedKey, slot.getLocation());
         }
@@ -137,6 +137,8 @@ public class WorldUtils {
             List<IslandPhaseData.OneBlockSlotData> apiList = apiUnlocks.get(dimensionKey);
             if (apiList != null) {
                 for (IslandPhaseData.OneBlockSlotData slot : apiList) {
+                    if (!isVisibleApiSlot(slot))
+                        continue;
                     if (slot != null && slot.getLocation() != null) {
                         Location location = toLocation(island, dimensionKey, slot.getLocation());
                         if (location != null)
@@ -175,6 +177,8 @@ public class WorldUtils {
         List<IslandPhaseData.OneBlockSlotData> apiList = apiUnlocks.get(normalized);
         if (apiList != null) {
             for (IslandPhaseData.OneBlockSlotData slot : apiList) {
+                if (!isVisibleApiSlot(slot))
+                    continue;
                 if (slot != null && slot.getLocation() != null) {
                     Location location = toLocation(island, normalized, slot.getLocation());
                     if (location != null)
@@ -246,6 +250,23 @@ public class WorldUtils {
         }
 
         return Dimension.getByName(dimensionKey);
+    }
+
+    private static boolean isVisibleApiSlot(@Nullable IslandPhaseData.OneBlockSlotData slot) {
+        return slot == null || slot.isActive();
+    }
+
+    @Nullable
+    private static IslandPhaseData.OneBlockSlotData getVisibleApiSlot(List<IslandPhaseData.OneBlockSlotData> slots, int index) {
+        int visibleIndex = 0;
+        for (IslandPhaseData.OneBlockSlotData slot : slots) {
+            if (!isVisibleApiSlot(slot))
+                continue;
+            if (visibleIndex == index)
+                return slot;
+            visibleIndex++;
+        }
+        return null;
     }
 
 }
