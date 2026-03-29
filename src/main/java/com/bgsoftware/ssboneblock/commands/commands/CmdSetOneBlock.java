@@ -7,8 +7,13 @@ import com.bgsoftware.ssboneblock.lang.Message;
 import com.bgsoftware.superiorskyblock.api.SuperiorSkyblockAPI;
 import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public final class CmdSetOneBlock implements ICommand {
 
@@ -19,7 +24,7 @@ public final class CmdSetOneBlock implements ICommand {
 
     @Override
     public String getUsage(java.util.Locale locale) {
-        return "setoneblock";
+        return "setoneblock <playerName>";
     }
 
     @Override
@@ -34,27 +39,33 @@ public final class CmdSetOneBlock implements ICommand {
 
     @Override
     public int getMinArgs() {
-        return 1;
+        return 2;
     }
 
     @Override
     public int getMaxArgs() {
-        return 1;
+        return 2;
     }
 
     @Override
     public void perform(OneBlockModule module, CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
-            Message.NO_PERMISSION.send(sender);
+        if (sender instanceof Player) {
+            if (!sender.isOp()) {
+                Message.NO_PERMISSION.send(sender);
+                return;
+            }
+        }
+        Player targetPlayer = Bukkit.getPlayerExact(args[1]);
+        if (targetPlayer == null) {
+            Message.INVALID_PLAYER.send(sender, args[1]);
             return;
         }
 
-        Player player = (Player) sender;
-        SuperiorPlayer superiorPlayer = SuperiorSkyblockAPI.getPlayer(player);
+        SuperiorPlayer superiorPlayer = SuperiorSkyblockAPI.getPlayer(targetPlayer);
         Island island = superiorPlayer == null ? null : superiorPlayer.getIsland();
 
         if (island == null) {
-            Message.INVALID_ISLAND.send(sender, player.getName());
+            Message.INVALID_ISLAND.send(sender, targetPlayer.getName());
             return;
         }
 
@@ -63,17 +74,25 @@ public final class CmdSetOneBlock implements ICommand {
             return;
         }
 
-        if (island.getOwner() == null ||
-                !island.getOwner().getUniqueId().equals(superiorPlayer.getUniqueId())) {
-            Message.NO_PERMISSION.send(sender);
-            return;
-        }
-
-        OneBlockMenu.open(module, player, island);
+        module.getPlugin().getServer().getScheduler().runTask(module.getPlugin(),
+                () -> OneBlockMenu.open(module, targetPlayer, island));
     }
 
     @Override
     public java.util.List<String> tabComplete(OneBlockModule module, CommandSender sender, String[] args) {
+        if (args.length == 2) {
+            List<String> players = new ArrayList<>();
+            String input = args[1].toLowerCase(Locale.ENGLISH);
+
+            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                if (onlinePlayer.getName().toLowerCase(Locale.ENGLISH).startsWith(input)) {
+                    players.add(onlinePlayer.getName());
+                }
+            }
+
+            return players;
+        }
+
         return java.util.Collections.emptyList();
     }
 
