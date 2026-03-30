@@ -17,6 +17,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.inventory.InventoryHolder;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -138,9 +141,15 @@ public final class PhasesHandler {
 
         oneBlockLocation.getBlock().setType(Material.BEDROCK);
 
-        if (activeTimer == null && nextPhaseLevel >= 0) {
-            new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(), oneBlockLocation,
-                    () -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes, oneBlockLocation));
+        if (activeTimer != null) {
+            activeTimer.trackLocation(oneBlockLocation);
+            return;
+        }
+
+        if (nextPhaseLevel >= 0) {
+            NextPhaseTimer nextPhaseTimer = new NextPhaseTimer(island, phaseData.getNextPhaseCooldown(), oneBlockLocation);
+            nextPhaseTimer.setOnFinish(() -> setPhaseLevel(island, nextPhaseLevel, superiorPlayer, loopTimes,
+                    oneBlockLocation, nextPhaseTimer.getTrackedLocations()));
         }
     }
 
@@ -150,6 +159,11 @@ public final class PhasesHandler {
 
     public boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer, int loopTimes,
                                  @Nullable Location oneBlockLocation) {
+        return setPhaseLevel(island, phaseLevel, superiorPlayer, loopTimes, oneBlockLocation, Collections.emptySet());
+    }
+
+    private boolean setPhaseLevel(Island island, int phaseLevel, @Nullable SuperiorPlayer superiorPlayer, int loopTimes,
+                                  @Nullable Location oneBlockLocation, Collection<Location> trackedCooldownLocations) {
         if (phaseLevel >= phaseData.length)
             return false;
 
@@ -159,6 +173,7 @@ public final class PhasesHandler {
         this.dataStore.setPhaseData(island, islandPhaseData);
 
         runNextAction(island, superiorPlayer, oneBlockLocation);
+        syncCooldownLocations(oneBlockLocation, trackedCooldownLocations);
 
         return true;
     }
@@ -184,6 +199,50 @@ public final class PhasesHandler {
 
     public DataStore getDataStore() {
         return dataStore;
+    }
+
+    private void syncCooldownLocations(@Nullable Location sourceLocation, Collection<Location> trackedCooldownLocations) {
+        if (sourceLocation == null || trackedCooldownLocations == null || trackedCooldownLocations.isEmpty())
+            return;
+
+        Block sourceBlock = sourceLocation.getBlock();
+        Material sourceType = sourceBlock.getType();
+        BlockState sourceState = sourceBlock.getState();
+
+        for (Location trackedLocation : trackedCooldownLocations) {
+            if (trackedLocation == null || isSameBlock(sourceLocation, trackedLocation))
+                continue;
+
+            Block targetBlock = trackedLocation.getBlock();
+            if (targetBlock.getType() != Material.BEDROCK)
+                continue;
+
+            Block supportBlock = targetBlock.getRelative(0, -1, 0);
+            boolean supportWasAir = supportBlock.getType() == Material.AIR;
+
+            targetBlock.setBlockData(sourceBlock.getBlockData().clone(), false);
+            copyBlockInventory(sourceState, targetBlock.getState());
+
+            if (supportWasAir && sourceType != Material.AIR && !sourceType.hasGravity()) {
+                supportBlock.setType(Material.AIR);
+            }
+        }
+    }
+
+    private static void copyBlockInventory(BlockState sourceState, BlockState targetState) {
+        if (!(sourceState instanceof InventoryHolder) || !(targetState instanceof InventoryHolder))
+            return;
+
+        ((InventoryHolder) targetState).getInventory().setContents(
+                ((InventoryHolder) sourceState).getInventory().getContents().clone());
+        targetState.update(true, false);
+    }
+
+    private static boolean isSameBlock(Location first, Location second) {
+        return first.getWorld() != null && first.getWorld().equals(second.getWorld()) &&
+                first.getBlockX() == second.getBlockX() &&
+                first.getBlockY() == second.getBlockY() &&
+                first.getBlockZ() == second.getBlockZ();
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")

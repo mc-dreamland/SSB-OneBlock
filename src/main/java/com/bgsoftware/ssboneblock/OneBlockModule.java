@@ -77,6 +77,8 @@ public final class OneBlockModule extends JavaPlugin {
         if (this.phasesHandler != null)
             this.phasesHandler.getDataStore().save();
 
+        WorldUtils.clearOneBlockCache();
+
         this.settingsHandler = new SettingsHandler(this);
         this.phasesHandler = new PhasesHandler(this, this.phasesHandler != null ? this.phasesHandler.getDataStore() :
                 (this.settingsHandler.dataType == DataType.FLAT ? new FlatDataStore(this) : new SqlDataStore(this)));
@@ -90,6 +92,7 @@ public final class OneBlockModule extends JavaPlugin {
         SaveTimer.stopTimer();
         if (this.phasesHandler != null)
             this.phasesHandler.getDataStore().save();
+        WorldUtils.clearOneBlockCache();
     }
 
     public void loadData() {

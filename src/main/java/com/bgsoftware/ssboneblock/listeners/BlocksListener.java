@@ -3,6 +3,7 @@ package com.bgsoftware.ssboneblock.listeners;
 import com.bgsoftware.ssboneblock.OneBlockModule;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.utils.WorldUtils;
+import com.bgsoftware.superiorskyblock.api.island.Island;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -49,8 +50,10 @@ public final class BlocksListener implements Listener {
         Player player = e.getPlayer();
         Block block = e.getBlock();
         Location blockLocation = block.getLocation();
+        boolean[] matchedOneBlock = {false};
 
         WorldUtils.lookupOneBlock(blockLocation, (oneBlockLocation, island) -> {
+            matchedOneBlock[0] = true;
             e.setCancelled(true);
 
             FakeBlockBreakEvent fakeEvent = new FakeBlockBreakEvent(e.getBlock(), e.getPlayer());
@@ -65,12 +68,6 @@ public final class BlocksListener implements Listener {
             } catch (Throwable error) {
                 shouldDropItems = false;
             }
-
-            Block underBlock = block.getRelative(BlockFace.DOWN);
-            boolean barrierPlacement = underBlock.getType() == Material.AIR;
-
-            if (barrierPlacement)
-                underBlock.setType(Material.BARRIER);
 
             ItemStack inHandItem = e.getPlayer().getItemInHand();
             blockLocation.add(0, 0.75, 0);
@@ -112,8 +109,6 @@ public final class BlocksListener implements Listener {
             block.setType(Material.AIR);
             module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation);
 
-            if (barrierPlacement)
-                underBlock.setType(Material.AIR);
 
             if (player.getLocation().getBlock().equals(block)) {
                 double playerY = player.getLocation().getY();
@@ -126,6 +121,9 @@ public final class BlocksListener implements Listener {
                 }
             }
         });
+
+        if (!matchedOneBlock[0])
+            logNonOneBlockBreak(player, blockLocation, block.getType());
 
     }
 
@@ -166,13 +164,7 @@ public final class BlocksListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkLoad(ChunkLoadEvent event) {
-        WorldUtils.lookupOneBlock(event.getChunk(), (oneBlockLocation, island) -> {
-            if (NextPhaseTimer.getTimer(island) != null)
-                return;
-
-            if (oneBlockLocation.getBlock().getType() == Material.BEDROCK)
-                module.getPhasesHandler().runNextAction(island, null, oneBlockLocation);
-        });
+        WorldUtils.lookupOneBlock(event.getChunk(), this::normalizeLoadedOneBlock);
     }
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
@@ -220,6 +212,58 @@ public final class BlocksListener implements Listener {
                 }
             }
         });
+    }
+
+    private void normalizeLoadedOneBlock(Location oneBlockLocation, Island island) {
+        if (NextPhaseTimer.getTimer(island) != null)
+            return;
+
+        if (oneBlockLocation.getBlock().getType() == Material.BEDROCK) {
+            oneBlockLocation.getBlock().setType(Material.COBBLESTONE);
+        }
+    }
+
+    private void logNonOneBlockBreak(Player player, Location blockLocation, Material blockType) {
+        if (!player.isOp())
+            return;
+
+        Island island = module.getPlugin().getGrid().getIslandAt(blockLocation);
+        if (island == null || !module.getPhasesHandler().canHaveOneBlock(island))
+            return;
+
+        String dimensionKey = WorldUtils.getDimensionKey(blockLocation);
+        List<Location> configuredLocations = WorldUtils.getOneBlockLocations(island, dimensionKey);
+
+        OneBlockModule.log("[debug] Non-oneblock break by OP " + player.getName() +
+                " at " + formatLocation(blockLocation) +
+                ", type=" + blockType +
+                ", island=" + island.getUniqueId() +
+                ", dimension=" + dimensionKey +
+                ", cooldown=" + (NextPhaseTimer.getTimer(island) != null) +
+                ", configured=" + formatLocations(configuredLocations));
+    }
+
+    private static String formatLocations(List<Location> locations) {
+        if (locations.isEmpty())
+            return "[]";
+
+        StringBuilder builder = new StringBuilder("[");
+        for (int index = 0; index < locations.size(); index++) {
+            if (index > 0)
+                builder.append(", ");
+            builder.append(formatLocation(locations.get(index)));
+        }
+        builder.append(']');
+        return builder.toString();
+    }
+
+    private static String formatLocation(Location location) {
+        World world = location.getWorld();
+        String worldName = world == null ? "null" : world.getName();
+        return worldName + '(' +
+                location.getBlockX() + ", " +
+                location.getBlockY() + ", " +
+                location.getBlockZ() + ')';
     }
 
     private static class FakeBlockBreakEvent extends BlockBreakEvent {

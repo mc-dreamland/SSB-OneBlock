@@ -64,6 +64,7 @@ public final class SqlDataStore implements DataStore {
         islandPhaseData = buildDefaultPhaseData(island);
         phaseCache.put(islandId, islandPhaseData);
         dirtyIslands.add(islandId);
+        WorldUtils.invalidateOneBlockCache(islandId);
         return islandPhaseData;
     }
 
@@ -72,6 +73,7 @@ public final class SqlDataStore implements DataStore {
         UUID islandId = island.getUniqueId();
         phaseCache.put(islandId, phaseData);
         dirtyIslands.add(islandId);
+        WorldUtils.invalidateOneBlockCache(islandId);
     }
 
     @Override
@@ -95,12 +97,14 @@ public final class SqlDataStore implements DataStore {
         UUID islandId = island.getUniqueId();
         phaseCache.remove(islandId);
         dirtyIslands.remove(islandId);
+        WorldUtils.invalidateOneBlockCache(islandId);
     }
 
     @Override
     public void load() {
         phaseCache.clear();
         dirtyIslands.clear();
+        WorldUtils.clearOneBlockCache();
     }
 
     @Override
@@ -200,6 +204,7 @@ public final class SqlDataStore implements DataStore {
         if (ensured != phaseData) {
             phaseCache.put(island.getUniqueId(), ensured);
             dirtyIslands.add(island.getUniqueId());
+            WorldUtils.invalidateOneBlockCache(island.getUniqueId());
             return ensured;
         }
         return phaseData;

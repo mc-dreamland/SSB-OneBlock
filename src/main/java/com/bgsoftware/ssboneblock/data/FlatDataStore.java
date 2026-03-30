@@ -48,15 +48,18 @@ public final class FlatDataStore implements DataStore {
     @Override
     public void setPhaseData(UUID islandUUID, IslandPhaseData phaseData) {
         this.islandPhaseData.put(islandUUID, phaseData);
+        WorldUtils.invalidateOneBlockCache(islandUUID);
     }
 
     @Override
     public void removeIsland(Island island) {
         this.islandPhaseData.remove(island.getUniqueId());
+        WorldUtils.invalidateOneBlockCache(island);
     }
 
     @Override
     public void load() {
+        WorldUtils.clearOneBlockCache();
         File file = new File(module.getDataFolder(), "database.json");
 
         convertOldDatabase(file);

@@ -18,12 +18,13 @@ public final class NextPhaseTimer extends BukkitRunnable {
 
     private final List<Hologram> holograms = new LinkedList<>();
     private final Island island;
-    private final Runnable onFinish;
     private final Location oneBlockLocation;
+    private final Set<Location> trackedLocations = new LinkedHashSet<>();
+    private Runnable onFinish = () -> {};
     private short time;
     private boolean runFinishCallback = true;
 
-    public NextPhaseTimer(Island island, short time, Location oneBlockLocation, Runnable onFinish) {
+    public NextPhaseTimer(Island island, short time, Location oneBlockLocation) {
         NextPhaseTimer oldTimer = timers.put(island.getUniqueId(), this);
         if (oldTimer != null)
             oldTimer.cancel();
@@ -31,7 +32,7 @@ public final class NextPhaseTimer extends BukkitRunnable {
         this.island = island;
         this.time = time;
         this.oneBlockLocation = oneBlockLocation == null ? null : oneBlockLocation.clone();
-        this.onFinish = onFinish;
+        trackLocation(oneBlockLocation);
 
         Location baseLocation = this.oneBlockLocation == null ? WorldUtils.getOneBlock(island) : this.oneBlockLocation;
 
@@ -46,8 +47,26 @@ public final class NextPhaseTimer extends BukkitRunnable {
         runTaskTimer(module.getPlugin(), 20L, 20L);
     }
 
+    public void setOnFinish(Runnable onFinish) {
+        this.onFinish = onFinish == null ? () -> {} : onFinish;
+    }
+
     public void setRunFinishCallback(boolean runFinishCallback) {
         this.runFinishCallback = runFinishCallback;
+    }
+
+    public void trackLocation(Location location) {
+        if (location == null)
+            return;
+        trackedLocations.add(location.clone());
+    }
+
+    public Set<Location> getTrackedLocations() {
+        Set<Location> copied = new LinkedHashSet<>();
+        for (Location trackedLocation : trackedLocations) {
+            copied.add(trackedLocation.clone());
+        }
+        return copied;
     }
 
     @Override
