@@ -56,6 +56,10 @@ public final class BlocksListener implements Listener {
             matchedOneBlock[0] = true;
             e.setCancelled(true);
 
+            if (NextPhaseTimer.getTimer(island) != null) {
+                return;
+            }
+
             FakeBlockBreakEvent fakeEvent = new FakeBlockBreakEvent(e.getBlock(), e.getPlayer());
             Bukkit.getPluginManager().callEvent(fakeEvent);
 
