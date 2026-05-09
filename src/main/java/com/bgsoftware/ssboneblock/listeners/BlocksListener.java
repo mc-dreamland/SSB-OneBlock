@@ -32,11 +32,19 @@ import org.bukkit.util.Vector;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class BlocksListener implements Listener {
 
     private final OneBlockModule module;
+    private final Map<DelayedBlockUpdateKey, Long> delayedBlockUpdates = new ConcurrentHashMap<>();
+    private final AtomicLong delayedBlockUpdateSequence = new AtomicLong();
 
     public BlocksListener(OneBlockModule module) {
         this.module = module;
@@ -112,6 +120,7 @@ public final class BlocksListener implements Listener {
             SuperiorPlayer superiorPlayer = module.getPlugin().getPlayers().getSuperiorPlayer(e.getPlayer());
             block.setType(Material.AIR);
             module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation);
+            scheduleDelayedBlockUpdates(player, oneBlockLocation);
 
 
             if (player.getLocation().getBlock().equals(block)) {
@@ -184,6 +193,7 @@ public final class BlocksListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onExplosion(EntityExplodeEvent e) {
         WorldUtils.lookupOneBlockInIsland(e.getEntity().getLocation(), (oneBlockLocation, island) -> {
+            NextPhaseTimer activeTimer = NextPhaseTimer.getTimer(island);
             Player sourcePlayer = null;
             if (e.getEntity() instanceof TNTPrimed) {
                 Entity sourceEntity = ((TNTPrimed) e.getEntity()).getSource();
@@ -194,10 +204,16 @@ public final class BlocksListener implements Listener {
             SuperiorPlayer superiorPlayer = sourcePlayer == null ? null :
                     module.getPlugin().getPlayers().getSuperiorPlayer(sourcePlayer);
 
-            for (Block block : e.blockList()) {
+            Iterator<Block> iterator = e.blockList().iterator();
+            while (iterator.hasNext()) {
+                Block block = iterator.next();
                 if (block.getLocation().equals(oneBlockLocation)) {
-                    Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
-                            module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation), 1L);
+                    if (activeTimer == null) {
+                        Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
+                                module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation), 1L);
+                    } else {
+                        iterator.remove();
+                    }
                     break;
                 }
             }
@@ -205,10 +221,10 @@ public final class BlocksListener implements Listener {
     }
 
     private void onPistonMoveInternal(Block pistonBlock, List<Block> blockList, Cancellable event) {
-        if (module.getSettings().pistonsInteraction)
-            return;
-
         WorldUtils.lookupOneBlockInIsland(pistonBlock.getLocation(), (oneBlockLocation, island) -> {
+            if (module.getSettings().pistonsInteraction && NextPhaseTimer.getTimer(island) == null)
+                return;
+
             for (Block block : blockList) {
                 if (block.getLocation().equals(oneBlockLocation)) {
                     event.setCancelled(true);
@@ -216,6 +232,34 @@ public final class BlocksListener implements Listener {
                 }
             }
         });
+    }
+
+    private void scheduleDelayedBlockUpdates(Player player, Location oneBlockLocation) {
+        DelayedBlockUpdateKey key = DelayedBlockUpdateKey.of(player, oneBlockLocation);
+        if (key == null)
+            return;
+
+        long sequence = delayedBlockUpdateSequence.incrementAndGet();
+        delayedBlockUpdates.put(key, sequence);
+
+        scheduleDelayedBlockUpdate(player.getUniqueId(), key, sequence, 40L);
+        scheduleDelayedBlockUpdate(player.getUniqueId(), key, sequence, 100L);
+    }
+
+    private void scheduleDelayedBlockUpdate(UUID playerId, DelayedBlockUpdateKey key, long sequence, long delay) {
+        Bukkit.getScheduler().runTaskLater(module.getPlugin(), () -> {
+            Long latestSequence = delayedBlockUpdates.get(key);
+            if (latestSequence == null || latestSequence != sequence)
+                return;
+
+            Player player = Bukkit.getPlayer(playerId);
+            World world = Bukkit.getWorld(key.worldId);
+            if (player != null && world != null)
+                module.getNMSAdapter().sendBlockUpdate(player, key.toLocation(world));
+
+            if (delay >= 100L)
+                delayedBlockUpdates.remove(key, sequence);
+        }, delay);
     }
 
     private void normalizeLoadedOneBlock(Location oneBlockLocation, Island island) {
@@ -268,6 +312,55 @@ public final class BlocksListener implements Listener {
                 location.getBlockX() + ", " +
                 location.getBlockY() + ", " +
                 location.getBlockZ() + ')';
+    }
+
+    private static final class DelayedBlockUpdateKey {
+
+        private final UUID playerId;
+        private final UUID worldId;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        private DelayedBlockUpdateKey(UUID playerId, UUID worldId, int x, int y, int z) {
+            this.playerId = playerId;
+            this.worldId = worldId;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        private static DelayedBlockUpdateKey of(Player player, Location location) {
+            World world = location.getWorld();
+            if (world == null)
+                return null;
+
+            return new DelayedBlockUpdateKey(player.getUniqueId(), world.getUID(),
+                    location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        }
+
+        private Location toLocation(World world) {
+            return new Location(world, x, y, z);
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object)
+                return true;
+
+            if (!(object instanceof DelayedBlockUpdateKey))
+                return false;
+
+            DelayedBlockUpdateKey other = (DelayedBlockUpdateKey) object;
+            return x == other.x && y == other.y && z == other.z &&
+                    playerId.equals(other.playerId) && worldId.equals(other.worldId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(playerId, worldId, x, y, z);
+        }
+
     }
 
     private static class FakeBlockBreakEvent extends BlockBreakEvent {

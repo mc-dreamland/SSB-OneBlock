@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Clearable;
@@ -78,6 +79,19 @@ public class NMSAdapter {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public void sendBlockUpdate(Player bukkitPlayer, Location location) {
+        World bukkitWorld = location.getWorld();
+
+        if (bukkitWorld == null || !bukkitWorld.equals(bukkitPlayer.getWorld()))
+            return;
+
+        ServerLevel serverLevel = ((CraftWorld) bukkitWorld).getHandle();
+        BlockPos blockPos = new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        ServerPlayer serverPlayer = ((CraftPlayer) bukkitPlayer).getHandle();
+
+        serverPlayer.connection.send(new ClientboundBlockUpdatePacket(serverLevel, blockPos));
     }
 
     public BlockState setBlockWithNBT(ServerLevel serverLevel, BlockPos blockPos, String nbt) throws Exception {

@@ -217,7 +217,14 @@ public class WorldUtils {
     }
 
     private static CachedOneBlocks getCachedOneBlocks(Island island) {
-        return oneBlockCache.computeIfAbsent(island.getUniqueId(), ignored -> buildCachedOneBlocks(island));
+        UUID islandId = island.getUniqueId();
+        CachedOneBlocks cachedOneBlocks = oneBlockCache.get(islandId);
+        if (cachedOneBlocks != null)
+            return cachedOneBlocks;
+
+        CachedOneBlocks builtOneBlocks = buildCachedOneBlocks(island);
+        CachedOneBlocks existingOneBlocks = oneBlockCache.putIfAbsent(islandId, builtOneBlocks);
+        return existingOneBlocks == null ? builtOneBlocks : existingOneBlocks;
     }
 
     private static CachedOneBlocks buildCachedOneBlocks(Island island) {

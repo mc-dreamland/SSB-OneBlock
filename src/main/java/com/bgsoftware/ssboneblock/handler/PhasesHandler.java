@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class PhasesHandler {
 
+    private static final Material COOLDOWN_BLOCK_TYPE = Material.STONE;
+
     private final Map<String, JsonArray> possibilities = new ConcurrentHashMap<>();
 
     private final OneBlockModule module;
@@ -139,7 +141,7 @@ public final class PhasesHandler {
                                     PhaseData phaseData, int nextPhaseLevel, int loopTimes) {
         NextPhaseTimer activeTimer = NextPhaseTimer.getTimer(island);
 
-        oneBlockLocation.getBlock().setType(Material.BEDROCK);
+        oneBlockLocation.getBlock().setType(COOLDOWN_BLOCK_TYPE);
 
         if (activeTimer != null) {
             activeTimer.trackLocation(oneBlockLocation);
@@ -174,6 +176,7 @@ public final class PhasesHandler {
 
         runNextAction(island, superiorPlayer, oneBlockLocation);
         syncCooldownLocations(oneBlockLocation, trackedCooldownLocations);
+        sendCooldownBlockUpdates(superiorPlayer, oneBlockLocation, trackedCooldownLocations);
 
         return true;
     }
@@ -214,7 +217,7 @@ public final class PhasesHandler {
                 continue;
 
             Block targetBlock = trackedLocation.getBlock();
-            if (targetBlock.getType() != Material.BEDROCK)
+            if (targetBlock.getType() != COOLDOWN_BLOCK_TYPE)
                 continue;
 
             Block supportBlock = targetBlock.getRelative(0, -1, 0);
@@ -227,6 +230,27 @@ public final class PhasesHandler {
                 supportBlock.setType(Material.AIR);
             }
         }
+    }
+
+    private void sendCooldownBlockUpdates(@Nullable SuperiorPlayer superiorPlayer, @Nullable Location sourceLocation,
+                                          Collection<Location> trackedCooldownLocations) {
+        if (superiorPlayer == null)
+            return;
+
+        superiorPlayer.runIfOnline(player -> {
+            if (sourceLocation != null)
+                module.getNMSAdapter().sendBlockUpdate(player, sourceLocation);
+
+            if (trackedCooldownLocations == null || trackedCooldownLocations.isEmpty())
+                return;
+
+            for (Location trackedLocation : trackedCooldownLocations) {
+                if (trackedLocation == null || (sourceLocation != null && isSameBlock(sourceLocation, trackedLocation)))
+                    continue;
+
+                module.getNMSAdapter().sendBlockUpdate(player, trackedLocation);
+            }
+        });
     }
 
     private static void copyBlockInventory(BlockState sourceState, BlockState targetState) {
