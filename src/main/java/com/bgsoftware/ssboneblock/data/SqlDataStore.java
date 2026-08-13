@@ -23,9 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class SqlDataStore implements DataStore {
 
-    private static final PersistentDataType<IslandPhaseData> PHASE_DATA_TYPE = new PersistentDataType<>(
+    private static final PersistentDataType<IslandPhaseData> LEGACY_PHASE_DATA_TYPE = new PersistentDataType<>(
             IslandPhaseData.class, PhasePersistentDataTypeContext.getInstance());
-    private static final String PHASE_DATA_KEY = "oneblock:phase_data";
+    private static final String LEGACY_PHASE_DATA_KEY = "oneblock:phase_data";
+    private static final String PHASE_DATA_KEY = "oneblock:phase_data_json";
 
     private final Map<UUID, IslandPhaseData> phaseCache = new ConcurrentHashMap<>();
     private final Set<UUID> dirtyIslands = ConcurrentHashMap.newKeySet();
@@ -46,15 +47,17 @@ public final class SqlDataStore implements DataStore {
 
 
         PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
-        IslandPhaseData islandPhaseData;
-        try {
-            islandPhaseData = persistentDataContainer.get(PHASE_DATA_KEY, PHASE_DATA_TYPE);
-        } catch (Throwable throwable) {
-            islandPhaseData = null;
-        }
+        IslandPhaseData islandPhaseData = readPhaseData(persistentDataContainer);
 
         if (islandPhaseData != null) {
             phaseCache.put(islandId, islandPhaseData);
+            return ensureCachedDefault(island, islandPhaseData, createNew);
+        }
+
+        islandPhaseData = readLegacyPhaseData(persistentDataContainer);
+        if (islandPhaseData != null) {
+            phaseCache.put(islandId, islandPhaseData);
+            dirtyIslands.add(islandId);
             return ensureCachedDefault(island, islandPhaseData, createNew);
         }
 
@@ -128,9 +131,51 @@ public final class SqlDataStore implements DataStore {
             if (phaseData == null)
                 continue;
             PersistentDataContainer persistentDataContainer = island.getPersistentDataContainer();
-            persistentDataContainer.put(PHASE_DATA_KEY, PHASE_DATA_TYPE, phaseData);
+            persistentDataContainer.put(PHASE_DATA_KEY, PersistentDataType.STRING, serializePhaseData(phaseData));
             dirtyIslands.remove(islandId);
         }
+    }
+
+    private static IslandPhaseData readPhaseData(PersistentDataContainer persistentDataContainer) {
+        try {
+            return deserializePhaseData(persistentDataContainer.get(PHASE_DATA_KEY, PersistentDataType.STRING));
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static IslandPhaseData readLegacyPhaseData(PersistentDataContainer persistentDataContainer) {
+        try {
+            IslandPhaseData phaseData = persistentDataContainer.get(LEGACY_PHASE_DATA_KEY, LEGACY_PHASE_DATA_TYPE);
+            if (phaseData != null)
+                return phaseData;
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            Object rawValue = persistentDataContainer.get(LEGACY_PHASE_DATA_KEY);
+            if (rawValue instanceof byte[] bytes)
+                return PhasePersistentDataTypeContext.getInstance().deserialize(bytes);
+            if (rawValue instanceof String stringValue)
+                return deserializePhaseData(stringValue);
+
+            com.google.gson.JsonElement json = JsonUtils.getGson().toJsonTree(rawValue);
+            return json != null && json.isJsonObject() ? OneBlockDataCodec.fromJson(json.getAsJsonObject()) : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static String serializePhaseData(IslandPhaseData islandPhaseData) {
+        IslandPhaseData cleaned = OneBlockDataCodec.cleanupExpiredUnlocks(islandPhaseData);
+        return JsonUtils.getGson().toJson(OneBlockDataCodec.toJson(cleaned));
+    }
+
+    private static IslandPhaseData deserializePhaseData(String json) {
+        if (json == null || json.trim().isEmpty())
+            return null;
+        com.google.gson.JsonObject parsed = JsonUtils.getGson().fromJson(json, com.google.gson.JsonObject.class);
+        return OneBlockDataCodec.fromJson(parsed);
     }
 
     private static final class PhasePersistentDataTypeContext implements PersistentDataTypeContext<IslandPhaseData> {
@@ -143,17 +188,14 @@ public final class SqlDataStore implements DataStore {
 
         @Override
         public byte[] serialize(IslandPhaseData islandPhaseData) {
-            IslandPhaseData cleaned = OneBlockDataCodec.cleanupExpiredUnlocks(islandPhaseData);
-            String json = JsonUtils.getGson().toJson(OneBlockDataCodec.toJson(cleaned));
-            return json.getBytes(StandardCharsets.UTF_8);
+            return serializePhaseData(islandPhaseData).getBytes(StandardCharsets.UTF_8);
         }
 
         @Override
         public IslandPhaseData deserialize(byte[] bytes) {
             try {
                 String json = new String(bytes, StandardCharsets.UTF_8);
-                com.google.gson.JsonObject parsed = JsonUtils.getGson().fromJson(json, com.google.gson.JsonObject.class);
-                IslandPhaseData data = OneBlockDataCodec.fromJson(parsed);
+                IslandPhaseData data = deserializePhaseData(json);
                 return data == null ? new IslandPhaseData(0, 0, 0) : data;
             } catch (Throwable ignored) {
                 ByteArrayDataInput data = ByteStreams.newDataInput(bytes);

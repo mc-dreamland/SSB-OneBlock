@@ -1,6 +1,7 @@
 package com.bgsoftware.ssboneblock.listeners;
 
 import com.bgsoftware.ssboneblock.OneBlockModule;
+import com.bgsoftware.ssboneblock.task.DroppedItemsCooldownTimer;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.utils.WorldUtils;
 import com.bgsoftware.superiorskyblock.api.island.Island;
@@ -64,7 +65,7 @@ public final class BlocksListener implements Listener {
             matchedOneBlock[0] = true;
             e.setCancelled(true);
 
-            if (NextPhaseTimer.getTimer(island) != null) {
+            if (NextPhaseTimer.getTimer(island) != null || DroppedItemsCooldownTimer.getTimer(island) != null) {
                 return;
             }
 
@@ -119,7 +120,11 @@ public final class BlocksListener implements Listener {
 
             SuperiorPlayer superiorPlayer = module.getPlugin().getPlayers().getSuperiorPlayer(e.getPlayer());
             block.setType(Material.AIR);
-            module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation);
+            if (hasTooManyDroppedItems(blockWorld)) {
+                DroppedItemsCooldownTimer.start(island, oneBlockLocation, superiorPlayer);
+            } else {
+                module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation);
+            }
             scheduleDelayedBlockUpdates(player, oneBlockLocation);
 
 
@@ -194,6 +199,7 @@ public final class BlocksListener implements Listener {
     public void onExplosion(EntityExplodeEvent e) {
         WorldUtils.lookupOneBlockInIsland(e.getEntity().getLocation(), (oneBlockLocation, island) -> {
             NextPhaseTimer activeTimer = NextPhaseTimer.getTimer(island);
+            DroppedItemsCooldownTimer droppedItemsTimer = DroppedItemsCooldownTimer.getTimer(island);
             Player sourcePlayer = null;
             if (e.getEntity() instanceof TNTPrimed) {
                 Entity sourceEntity = ((TNTPrimed) e.getEntity()).getSource();
@@ -208,7 +214,7 @@ public final class BlocksListener implements Listener {
             while (iterator.hasNext()) {
                 Block block = iterator.next();
                 if (block.getLocation().equals(oneBlockLocation)) {
-                    if (activeTimer == null) {
+                    if (activeTimer == null && droppedItemsTimer == null) {
                         Bukkit.getScheduler().runTaskLater(module.getPlugin(), () ->
                                 module.getPhasesHandler().runNextAction(island, superiorPlayer, oneBlockLocation), 1L);
                     } else {
@@ -222,7 +228,8 @@ public final class BlocksListener implements Listener {
 
     private void onPistonMoveInternal(Block pistonBlock, List<Block> blockList, Cancellable event) {
         WorldUtils.lookupOneBlockInIsland(pistonBlock.getLocation(), (oneBlockLocation, island) -> {
-            if (module.getSettings().pistonsInteraction && NextPhaseTimer.getTimer(island) == null)
+            if (module.getSettings().pistonsInteraction && NextPhaseTimer.getTimer(island) == null &&
+                    DroppedItemsCooldownTimer.getTimer(island) == null)
                 return;
 
             for (Block block : blockList) {
@@ -263,7 +270,7 @@ public final class BlocksListener implements Listener {
     }
 
     private void normalizeLoadedOneBlock(Location oneBlockLocation, Island island) {
-        if (NextPhaseTimer.getTimer(island) != null)
+        if (NextPhaseTimer.getTimer(island) != null || DroppedItemsCooldownTimer.getTimer(island) != null)
             return;
 
         if (oneBlockLocation.getBlock().getType() == Material.BEDROCK) {
@@ -287,8 +294,14 @@ public final class BlocksListener implements Listener {
                 ", type=" + blockType +
                 ", island=" + island.getUniqueId() +
                 ", dimension=" + dimensionKey +
-                ", cooldown=" + (NextPhaseTimer.getTimer(island) != null) +
+                ", cooldown=" + (NextPhaseTimer.getTimer(island) != null ||
+                        DroppedItemsCooldownTimer.getTimer(island) != null) +
                 ", configured=" + formatLocations(configuredLocations));
+    }
+
+    private boolean hasTooManyDroppedItems(World world) {
+        int limit = module.getSettings().droppedItemEntityLimit;
+        return limit > 0 && world.getEntitiesByClass(Item.class).size() > limit;
     }
 
     private static String formatLocations(List<Location> locations) {

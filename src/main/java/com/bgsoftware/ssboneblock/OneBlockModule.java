@@ -12,6 +12,7 @@ import com.bgsoftware.ssboneblock.listeners.BlocksListener;
 import com.bgsoftware.ssboneblock.listeners.IslandsListener;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.ssboneblock.phases.PhaseData;
+import com.bgsoftware.ssboneblock.task.DroppedItemsCooldownTimer;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.task.SaveTimer;
 import com.bgsoftware.ssboneblock.utils.NMSAdapter;
@@ -88,6 +89,7 @@ public final class OneBlockModule extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        DroppedItemsCooldownTimer.cancelTimers();
         NextPhaseTimer.cancelTimers();
         SaveTimer.stopTimer();
         if (this.phasesHandler != null)

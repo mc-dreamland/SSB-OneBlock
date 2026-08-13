@@ -22,6 +22,7 @@ public final class SettingsHandler {
 
     public final BlockOffset blockOffset;
     public final List<String> timerFormat;
+    public final List<String> droppedItemCooldownFormat;
     public final List<Pair<String, Integer>> phases;
     public final List<String> whitelistedSchematics;
     public final DataType dataType;
@@ -30,6 +31,7 @@ public final class SettingsHandler {
     public final boolean pistonsInteraction;
     public final boolean dropNaturally;
     public final boolean gravity;
+    public final int droppedItemEntityLimit;
 
     public SettingsHandler(OneBlockModule module) {
         File file = new File(module.getDataFolder(), "config.yml");
@@ -64,6 +66,18 @@ public final class SettingsHandler {
         }
         Collections.reverse(this.timerFormat);
 
+        Object droppedItemCooldownFormat = cfg.get("dropped-item-cooldown-format");
+        if (droppedItemCooldownFormat instanceof String) {
+            this.droppedItemCooldownFormat = Arrays.asList(ChatColor.translateAlternateColorCodes('&',
+                    (String) droppedItemCooldownFormat).split("\n"));
+        } else {
+            // noinspection unchecked
+            this.droppedItemCooldownFormat = ((List<String>) droppedItemCooldownFormat).stream()
+                    .map(line -> ChatColor.translateAlternateColorCodes('&', line))
+                    .collect(Collectors.toList());
+        }
+        Collections.reverse(this.droppedItemCooldownFormat);
+
         List<String> ph = cfg.getStringList("phases");
         phases = new ArrayList<>();
         for (String s : ph) {
@@ -93,6 +107,7 @@ public final class SettingsHandler {
         this.pistonsInteraction = cfg.getBoolean("piston-interaction", true);
         this.dropNaturally = cfg.getBoolean("drop-naturally", true);
         this.gravity = cfg.getBoolean("gravity", true);
+        this.droppedItemEntityLimit = Math.max(0, cfg.getInt("dropped-item-entity-limit", 1000));
 
     }
 

@@ -6,6 +6,7 @@ import com.bgsoftware.ssboneblock.data.DataStore;
 import com.bgsoftware.ssboneblock.lang.Message;
 import com.bgsoftware.ssboneblock.phases.IslandPhaseData;
 import com.bgsoftware.ssboneblock.phases.PhaseData;
+import com.bgsoftware.ssboneblock.task.DroppedItemsCooldownTimer;
 import com.bgsoftware.ssboneblock.task.NextPhaseTimer;
 import com.bgsoftware.ssboneblock.utils.JsonUtils;
 import com.bgsoftware.ssboneblock.utils.Pair;
@@ -71,7 +72,7 @@ public final class PhasesHandler {
     }
 
     public void runNextAction(Island island, @Nullable SuperiorPlayer superiorPlayer, @Nullable Location oneBlockLocation) {
-        if (!canHaveOneBlock(island)) {
+        if (!canHaveOneBlock(island) || DroppedItemsCooldownTimer.getTimer(island) != null) {
             return;
         }
         int i = 0;

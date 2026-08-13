@@ -136,7 +136,7 @@
             <artifactId>SuperiorSkyblock</artifactId>
             <version>2024.4</version>
             <scope>system</scope>
-            <systemPath>${pom.basedir}/libs/SuperiorSkyblock2-2024.4.jar</systemPath>
+            <systemPath>${pom.basedir}/libs/SuperiorSkyblock2-2026.1.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.bgsoftware.common.config</groupId>

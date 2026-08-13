@@ -13,6 +13,17 @@ block-offset: -0.5, -1, -0.5
 # This section can support multiple lines.
 timer-format: '&6{0}'
 
+# The maximum number of loaded dropped-item entities allowed in a world.
+# When the amount exceeds this limit, successfully mining a OneBlock starts
+# an escalating cooldown. Set this to 0 to disable the feature.
+dropped-item-entity-limit: 1000
+
+# The hologram shown during the dropped-item cooldown.
+# {0} is replaced with the remaining cooldown in seconds.
+dropped-item-cooldown-format:
+  - '&c当前世界掉落物实体过多，请先清理'
+  - '&6{0}'
+
 # Set the hierarchy of the phases
 phases:
   - '2000      @   0-plains-phase.json'
